@@ -13,7 +13,9 @@ import {
   addComment,
   getCommentsByPost,
   updateComment,
-  deleteComment
+  deleteComment,
+  getPaginatedComments,
+  getPaginatedPosts
 } from '../models/forumModel';
 
 export const createForumPost = async (req: AuthRequest, res: Response) => {
@@ -27,28 +29,23 @@ export const createForumPost = async (req: AuthRequest, res: Response) => {
   res.status(201).json(post);
 };
 
+export const getApprovedPosts = async (req: Request, res: Response) => {
+  const page = parseInt(req.query.page as string, 10) || 1;
+  const limit = parseInt(req.query.limit as string, 10) || 10;
 
-// export const getApprovedPosts = async (_req: Request, res: Response) => {
-//   const posts = await getAllApprovedPosts();
-//   res.json(posts);
-// };
+  if (isNaN(page) || isNaN(limit)) {
+    return res.status(400).json({ message: 'Page and limit must be numbers' });
+  }
 
- 
-export const getApprovedPosts = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = req.user ? Number(req.user.id) : 0; // 👈 fallback to 0 if not logged in
-
-    const posts = await getAllApprovedPostsWithLikeInfo(userId); // 👈 always pass a number
-
-    res.json(posts);
-  } catch (error) {
-    console.error('Error fetching posts:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.log('Getting posts with:', { page, limit });
+    const data = await getPaginatedPosts(page, limit);
+    res.json(data);
+  } catch (err) {
+    console.error('Pagination error:', err);
+    res.status(500).json({ message: 'Server error while paginating posts' });
   }
 };
-
-
-
 
 export const approveForumPost = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
@@ -99,11 +96,26 @@ export const createComment = async (req: AuthRequest, res: Response) => {
   res.status(201).json(comment);
 };
 
+ 
 export const getPostComments = async (req: Request, res: Response) => {
   const postId = Number(req.params.postId);
-  const comments = await getCommentsByPost(postId);
-  res.json(comments);
+  const page = parseInt(req.query.page as string, 10) || 1;
+  const limit = parseInt(req.query.limit as string, 10) || 10;
+
+  if (isNaN(postId) || isNaN(page) || isNaN(limit)) {
+    return res.status(400).json({ message: 'Invalid query parameters' });
+  }
+
+  try {
+    const data = await getPaginatedComments(postId, page, limit);
+    res.json(data);
+  } catch (err) {
+    console.error('Pagination error (comments):', err);
+    res.status(500).json({ message: 'Server error while paginating comments' });
+  }
 };
+
+
 
 export const editComment = async (req: AuthRequest, res: Response) => {
   const commentId = Number(req.params.commentId);

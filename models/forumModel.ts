@@ -124,3 +124,55 @@ export const deleteComment = async (commentId: number, userId: number) => {
 };
 
 
+export const getPaginatedPosts = async (page: number, limit: number) => {
+  const offset = (page - 1) * limit;
+  console.log('Running SQL with:', { limit, offset });
+
+  const [rows] = await db.query(
+    `SELECT posts.*, users.name AS author 
+     FROM posts 
+     JOIN users ON posts.user_id = users.id 
+     WHERE posts.status = 'active' 
+     ORDER BY posts.created_at DESC 
+     LIMIT ${limit} OFFSET ${offset}`
+  );
+
+  const [countResult]: any = await db.execute(
+    `SELECT COUNT(*) as total FROM posts WHERE status = 'active'`
+  );
+
+  return {
+    posts: rows,
+    total: countResult[0].total,
+    page,
+    pages: Math.ceil(countResult[0].total / limit),
+  };
+};
+
+
+export const getPaginatedComments = async (postId: number, page: number, limit: number) => {
+  const offset = (page - 1) * limit;
+  console.log('Running comment SQL with:', { postId, limit, offset });
+
+  const [rows] = await db.query(
+    `SELECT comments.*, users.name AS author 
+     FROM comments 
+     JOIN users ON comments.user_id = users.id 
+     WHERE comments.post_id = ? 
+     ORDER BY comments.created_at ASC 
+     LIMIT ${limit} OFFSET ${offset}`,
+    [postId]
+  );
+
+  const [countResult]: any = await db.execute(
+    `SELECT COUNT(*) as total FROM comments WHERE post_id = ?`,
+    [postId]
+  );
+
+  return {
+    comments: rows,
+    total: countResult[0].total,
+    page,
+    pages: Math.ceil(countResult[0].total / limit),
+  };
+};
