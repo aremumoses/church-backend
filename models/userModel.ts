@@ -16,7 +16,11 @@ export interface User {
   profile_pic?: string;
   created_at?: string;
 }
-
+ 
+export const getUsersByRole = async (role: string): Promise<User[]> => {
+  const [rows] = await db.execute('SELECT id, name, email, role FROM users WHERE role = ?', [role]);
+  return rows as User[];
+};
 
 // 2. Create a user
 export const createUser = async (user: Partial<User>) => {

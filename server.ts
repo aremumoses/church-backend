@@ -14,6 +14,12 @@ import { createNotification, getUnreadNotifications, markNotificationsAsRead } f
 import churchInfoRoutes from './routes/churchInfoRoutes';
 import announcementRoutes from './routes/announcementRoutes';
 import eventRoutes from './routes/eventRoutes';
+import mediaRoutes from './routes/mediaRoutes';
+import donationRoutes from './routes/donationROutes';
+import userRoutes from './routes/userRoutes';
+import dashboardRoutes from './routes/dashboardRoutes';
+import feedbackRoutes from './routes/feedbackRoutes';
+
 dotenv.config();
 
 const app: Application = express();
@@ -29,6 +35,8 @@ const io = new Server(server, {
 });
 
 app.use(cors());
+app.use('/api/donations/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -43,6 +51,13 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/church-info', churchInfoRoutes);
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/media', mediaRoutes);
+app.use('/api/donations', donationRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/feedback', feedbackRoutes);
+
+// app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 const onlineUsers = new Map<number, { name: string; role: string }>();
 
 app.get('/api/online-users', (req: Request, res: Response) => {
