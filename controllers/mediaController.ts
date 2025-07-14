@@ -23,7 +23,7 @@ export const uploadMediaFile = async (req: AuthRequest, res: Response) => {
       type,
       url,
       category,
-      uploaded_by: Number(req.user!.id),
+      uploaded_by: (req.user!.id),
     });
 
     res.status(201).json({ message: 'Media uploaded successfully' });
@@ -76,7 +76,7 @@ export const getCategoryMedia = async (req: Request, res: Response) => {
 };
 
 export const deleteMedia = async (req: AuthRequest, res: Response) => {
-  const id = parseInt(req.params.id);
+  const id =  (req.params.id);
 
   if (req.user?.role !== 'admin' && req.user?.role !== 'superadmin') {
     return res.status(403).json({ message: 'Unauthorized' });

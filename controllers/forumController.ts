@@ -9,7 +9,7 @@ import {
   hasUserLikedPost,
   approvePost,
   deletePost,
-  getAllApprovedPostsWithLikeInfo,
+   
   addComment,
   getCommentsByPost,
   updateComment,
@@ -20,7 +20,7 @@ import {
 
 export const createForumPost = async (req: AuthRequest, res: Response) => {
   const { title, content, category } = req.body;
-  const userId = Number(req.user!.id);  
+  const userId =  (req.user!.id);  
   const role = req.user!.role;
 
   const status = role === 'admin' || role === 'superadmin' ? 'active' : 'pending';
@@ -60,8 +60,8 @@ export const deleteForumPost = async (req: AuthRequest, res: Response) => {
 };
 
 export const likeForumPost = async (req: AuthRequest, res: Response) => {
-  const postId = Number(req.params.id);
-  const userId = Number(req.user!.id);  
+  const postId =  (req.params.id);
+  const userId =  (req.user!.id);  
 
   const liked = await hasUserLikedPost(postId, userId);
   if (liked) {
@@ -89,20 +89,20 @@ export const getPendingPosts = async (req: AuthRequest, res: Response) => {
 
 
 export const createComment = async (req: AuthRequest, res: Response) => {
-  const postId = Number(req.params.postId);
+  const postId =  (req.params.postId);
   const { content } = req.body;
-    const userId = Number(req.user!.id);
+    const userId =  (req.user!.id);
   const comment = await addComment(postId, userId, content);
   res.status(201).json(comment);
 };
 
  
 export const getPostComments = async (req: Request, res: Response) => {
-  const postId = Number(req.params.postId);
+  const postId =  (req.params.postId);
   const page = parseInt(req.query.page as string, 10) || 1;
   const limit = parseInt(req.query.limit as string, 10) || 10;
 
-  if (isNaN(postId) || isNaN(page) || isNaN(limit)) {
+  if ( (postId) || isNaN(page) || isNaN(limit)) {
     return res.status(400).json({ message: 'Invalid query parameters' });
   }
 
@@ -118,18 +118,18 @@ export const getPostComments = async (req: Request, res: Response) => {
 
 
 export const editComment = async (req: AuthRequest, res: Response) => {
-  const commentId = Number(req.params.commentId);
+  const commentId =  (req.params.commentId);
   const { content } = req.body;
-//    const postId = Number(req.params.id);
-  const userId = Number(req.user!.id);  
+//    const postId =  (req.params.id);
+  const userId =  (req.user!.id);  
 
   await updateComment(commentId, userId, content);
   res.json({ message: 'Comment updated' });
 };
 
 export const removeComment = async (req: AuthRequest, res: Response) => {
-  const commentId = Number(req.params.commentId);
-  const userId = Number(req.user!.id);  
+  const commentId =  (req.params.commentId);
+  const userId =  (req.user!.id);  
 
 
   await deleteComment(commentId, userId);

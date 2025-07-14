@@ -1,6 +1,6 @@
 import { Response } from 'express';
-import { getChurchInfo, updateChurchInfo } from '../models/churchInfoModel';
 import { AuthRequest } from '../middleware/authMiddleware'; // Adjust path as needed
+import { getChurchInfo, updateChurchInfo } from '../services/churchInfoService';
 
 // Fetch church info (public for all users)
 export const fetchChurchInfo = async (req: AuthRequest, res: Response) => {

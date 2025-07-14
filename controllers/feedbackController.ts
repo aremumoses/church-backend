@@ -6,7 +6,7 @@ import { createFeedback,
  
 export const submitFeedback = async (req: AuthRequest, res: Response) => {
   const { subject, message } = req.body;
-  const userId = Number(req.user?.id);
+  const userId =  (req.user?.id);
 
   if (!userId || !subject || !message) {
     return res.status(400).json({ message: 'Subject and message are required' });

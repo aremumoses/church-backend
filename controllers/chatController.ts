@@ -5,7 +5,7 @@ import { getChatHistory } from '../models/chatModel';
 
 export const sendChatMessage = async (req: AuthRequest, res: Response) => {
   const { receiverId, message } = req.body;
-  const senderId = Number(req.user!.id);
+  const senderId = (req.user!.id);
 
   if (!receiverId || !message) {
     return res.status(400).json({ message: 'receiverId and message are required' });
@@ -21,8 +21,8 @@ export const sendChatMessage = async (req: AuthRequest, res: Response) => {
 };
 
 export const fetchConversation = async (req: AuthRequest, res: Response) => {
-  const senderId = Number(req.user!.id);
-  const receiverId = Number(req.params.userId);
+  const senderId = (req.user!.id);
+  const receiverId = (req.params.userId);
 
   try {
     const messages = await getConversationWithUser(senderId, receiverId);
@@ -34,7 +34,7 @@ export const fetchConversation = async (req: AuthRequest, res: Response) => {
 };
 
 export const fetchConversationsList = async (req: AuthRequest, res: Response) => {
-  const userId = Number(req.user!.id);
+  const userId = (req.user!.id);
 
   try {
     const list = await getConversationList(userId);
@@ -54,7 +54,7 @@ export const fetchChatHistory = async (req: Request, res: Response) => {
   }
 
   try {
-    const messages = await getChatHistory(Number(user1), Number(user2));
+    const messages = await getChatHistory(user1 as string, user2 as string);
     res.json(messages);
   } catch (error) {
     console.error('Chat history error:', error);

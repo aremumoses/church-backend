@@ -1,24 +1,16 @@
-import db from '../config/db';
+import mongoose from 'mongoose';
 
-export const createAnnouncement = async (title: string, content: string, createdBy: number) => {
-  await db.execute(
-    'INSERT INTO announcements (title, content, created_by) VALUES (?, ?, ?)',
-    [title, content, createdBy]
-  );
-};
+const announcementSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    status: { type: String, default: 'active' },
+  },
+  {
+    timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
+  }
+);
 
-export const getAllActiveAnnouncements = async () => {
-  const [rows] = await db.execute('SELECT * FROM announcements WHERE status = "active" ORDER BY created_at DESC');
-  return rows;
-};
-
-export const updateAnnouncement = async (id: number, title: string, content: string) => {
-  await db.execute(
-    'UPDATE announcements SET title = ?, content = ? WHERE id = ?',
-    [title, content, id]
-  );
-};
-
-export const deleteAnnouncement = async (id: number) => {
-  await db.execute('DELETE FROM announcements WHERE id = ?', [id]);
-};
+const Announcement = mongoose.model('Announcement', announcementSchema);
+export default Announcement;

@@ -1,10 +1,10 @@
- 
+import mongoose from 'mongoose';
 
-import db from '../config/db';
+// -----------------------------
+// User Type & Schema
+// -----------------------------
 
-// 1. Define the User type
-export interface User {
-  id: string;
+export interface UserDocument extends mongoose.Document {
   name: string;
   email: string;
   password: string;
@@ -14,82 +14,89 @@ export interface User {
   gender?: 'male' | 'female' | 'other';
   birthday?: string;
   profile_pic?: string;
-  created_at?: string;
+  created_at?: Date;
 }
- 
-export const getUsersByRole = async (role: string): Promise<User[]> => {
-  const [rows] = await db.execute('SELECT id, name, email, role FROM users WHERE role = ?', [role]);
-  return rows as User[];
+
+const userSchema = new mongoose.Schema<UserDocument>(
+  {
+    name: { type: String, required: true },
+    email: { type: String, unique: true, required: true },
+    password: { type: String, required: true },
+    role: {
+      type: String,
+      enum: ['user', 'admin', 'superadmin'],
+      default: 'user',
+    },
+    status: {
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'active',
+    },
+    phone: String,
+    gender: {
+      type: String,
+      enum: ['male', 'female', 'other'],
+    },
+    birthday: String,
+    profile_pic: String,
+  },
+  {
+    timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
+  }
+);
+
+const User = mongoose.model<UserDocument>('User', userSchema);
+
+// -----------------------------
+// Model Functions
+// -----------------------------
+
+export const getUsersByRole = async (role: string): Promise<UserDocument[]> => {
+  return await User.find({ role }, 'id name email role');
 };
 
-// 2. Create a user
-export const createUser = async (user: Partial<User>) => {
-  const [result] = await db.execute(
-    'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-    [user.name, user.email, user.password, user.role || 'user']
-  );
-  return result;
+export const createUser = async (user: Partial<UserDocument>) => {
+  const newUser = new User(user);
+  return await newUser.save();
 };
 
-// 3. Get user by email
-export const getUserByEmail = async (email: string): Promise<User | null> => {
-  const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
-  const users = rows as User[];
-  return users.length > 0 ? users[0] : null;
+export const getUserByEmail = async (email: string): Promise<UserDocument | null> => {
+  return await User.findOne({ email });
 };
 
-// 4. Get user by ID
-export const getUserById = async (id: string): Promise<User | null> => {
-  const [rows] = await db.execute('SELECT * FROM users WHERE id = ?', [id]);
-  const users = rows as User[];
-  return users.length > 0 ? users[0] : null;
+export const getUserById = async (id: string): Promise<UserDocument | null> => {
+  return await User.findById(id);
 };
 
-// 5. Update user password
 export const updateUserPassword = async (email: string, newHashedPassword: string) => {
-  const [result] = await db.execute(
-    'UPDATE users SET password = ? WHERE email = ?',
-    [newHashedPassword, email]
-  );
-  return result;
+  return await User.findOneAndUpdate({ email }, { password: newHashedPassword }, { new: true });
 };
 
 export const updateUserProfile = async (
   id: string,
-  updates: Partial<User>
+  updates: Partial<UserDocument>
 ) => {
-  const fields = [];
-  const values = [];
-
-  for (const [key, value] of Object.entries(updates)) {
-    if (value !== undefined) {
-      fields.push(`${key} = ?`);
-      values.push(value);
-    }
-  }
-
-  if (fields.length === 0) return;
-
-  const sql = `UPDATE users SET ${fields.join(', ')} WHERE id = ?`;
-  values.push(id);
-  await db.execute(sql, values);
+  return await User.findByIdAndUpdate(id, updates, { new: true });
 };
 
-export const getUserPublicProfileById = async (id: string): Promise<Partial<User> | null> => {
-  const [rows] = await db.execute(
-    'SELECT id, name, role, profile_pic FROM users WHERE id = ?',
-    [id]
-  );
-  const users = rows as Partial<User>[];
-  return users.length > 0 ? users[0] : null;
+export const getUserPublicProfileById = async (
+  id: string
+): Promise<Partial<UserDocument> | null> => {
+  return await User.findById(id).select('id name role profile_pic');
 };
 
-export const updateUserRole = async (id: string, role: 'user' | 'admin') => {
-  const sql = 'UPDATE users SET role = ? WHERE id = ?';
-  await db.execute(sql, [role, id]);
+export const updateUserRole = async (
+  id: string,
+  role: 'user' | 'admin'
+): Promise<UserDocument | null> => {
+  return await User.findByIdAndUpdate(id, { role }, { new: true });
 };
 
-export const updateUserStatus = async (id: string, status: 'active' | 'inactive') => {
-  const sql = 'UPDATE users SET status = ? WHERE id = ?';
-  await db.execute(sql, [status, id]);
+export const updateUserStatus = async (
+  id: string,
+  status: 'active' | 'inactive'
+): Promise<UserDocument | null> => {
+  return await User.findByIdAndUpdate(id, { status }, { new: true });
 };
+
+export default User;

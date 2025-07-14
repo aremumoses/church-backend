@@ -1,37 +1,52 @@
-import db from '../config/db';
+import User from './userModel';
+ 
+import MediaFile from './mediaFileModel';
+import { Donation } from './donationModel';
+import Post from './postModel';
 
+// 📊 Get user stats
 export const getUserStats = async () => {
-  const [total] = await db.execute('SELECT COUNT(*) as total FROM users');
-  const [active] = await db.execute('SELECT COUNT(*) as active FROM users WHERE status = "active"');
-  const [inactive] = await db.execute('SELECT COUNT(*) as inactive FROM users WHERE status = "inactive"');
+  const total = await User.countDocuments();
+  const active = await User.countDocuments({ status: 'active' });
+  const inactive = await User.countDocuments({ status: 'inactive' });
+
   return {
-    total: (total as any)[0].total,
-    active: (active as any)[0].active,
-    inactive: (inactive as any)[0].inactive
+    total,
+    active,
+    inactive,
   };
 };
 
+// 📊 Get post stats
 export const getPostStats = async () => {
-  const [total] = await db.execute('SELECT COUNT(*) as total FROM posts');
-  const [pending] = await db.execute('SELECT COUNT(*) as pending FROM posts WHERE status = "pending"');
-  const [approved] = await db.execute('SELECT COUNT(*) as approved FROM posts WHERE status = "active"');
+  const total = await Post.countDocuments();
+  const pending = await Post.countDocuments({ status: 'pending' });
+  const approved = await Post.countDocuments({ status: 'active' });
+
   return {
-    total: (total as any)[0].total,
-    pending: (pending as any)[0].pending,
-    approved: (approved as any)[0].approved
+    total,
+    pending,
+    approved,
   };
 };
 
+// 📊 Get donation stats
 export const getDonationStats = async () => {
-  const [rows] = await db.execute(`
-    SELECT COUNT(*) as successfulCount, SUM(amount) as totalAmount
-    FROM donations
-    WHERE status = 'success'
-  `);
-  return (rows as any)[0];
+  const donations = await Donation.aggregate([
+    { $match: { status: 'success' } },
+    {
+      $group: {
+        _id: null,
+        successfulCount: { $sum: 1 },
+        totalAmount: { $sum: '$amount' },
+      },
+    },
+  ]);
+
+  return donations[0] || { successfulCount: 0, totalAmount: 0 };
 };
 
+// 📊 Get media count
 export const getMediaCount = async () => {
-  const [rows] = await db.execute('SELECT COUNT(*) as count FROM media_files');
-  return (rows as any)[0].count;
+  return await MediaFile.countDocuments();
 };

@@ -1,86 +1,138 @@
-import db from '../config/db';
+import mongoose from 'mongoose';
 
-export const createDonation = async (userId: number, categoryId: number, amount: number, reference: string) => {
-  await db.execute(
-    'INSERT INTO donations (user_id, category_id, amount, reference, status) VALUES (?, ?, ?, ?, ?)',
-    [userId, categoryId, amount, reference, 'pending']
-  );
+// ------------------------------
+// 1. Donation Category Schema
+// ------------------------------
+const donationCategorySchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  description: String,
+});
+
+const DonationCategory = mongoose.model('DonationCategory', donationCategorySchema);
+
+// ------------------------------
+// 2. Donation Schema
+// ------------------------------
+export const donationSchema = new mongoose.Schema(
+  {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'DonationCategory', required: true },
+    amount: { type: Number, required: true },
+    reference: { type: String, required: true, unique: true },
+    status: { type: String, enum: ['pending', 'success', 'failed'], default: 'pending' },
+  },
+  { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
+);
+
+export const Donation = mongoose.model('Donation', donationSchema);
+
+// ------------------------------
+// 3. Donation Operations
+// ------------------------------
+
+export const createDonation = async (
+  userId: string,
+  categoryId: string,
+  amount: number,
+  reference: string
+) => {
+  const donation = new Donation({ userId, categoryId, amount, reference, status: 'pending' });
+  await donation.save();
 };
 
 export const updateDonationStatus = async (reference: string, status: string) => {
-  await db.execute('UPDATE donations SET status = ? WHERE reference = ?', [status, reference]);
+  await Donation.findOneAndUpdate({ reference }, { status });
 };
 
-export const getUserDonations = async (userId: number) => {
-  const [rows] = await db.execute(
-    `SELECT donations.*, donation_categories.name as category_name 
-     FROM donations 
-     LEFT JOIN donation_categories ON donations.category_id = donation_categories.id 
-     WHERE user_id = ? ORDER BY created_at DESC`,
-    [userId]
-  );
-  return rows;
+export const updateDonationStatusByReference = updateDonationStatus;
+
+export const getUserDonations = async (userId: string) => {
+  return await Donation.find({ userId })
+    .populate('categoryId', 'name')
+    .sort({ created_at: -1 });
 };
 
 export const getAllDonations = async () => {
-  const [rows] = await db.execute(
-    `SELECT donations.*, users.name as donor_name, donation_categories.name as category_name 
-     FROM donations 
-     LEFT JOIN users ON donations.user_id = users.id 
-     LEFT JOIN donation_categories ON donations.category_id = donation_categories.id 
-     ORDER BY created_at DESC`
-  );
-  return rows;
+  return await Donation.find()
+    .populate('userId', 'name')
+    .populate('categoryId', 'name')
+    .sort({ created_at: -1 });
 };
 
+// ------------------------------
+// 4. Donation Category Operations
+// ------------------------------
+
 export const createDonationCategory = async (name: string, description: string) => {
-  await db.execute(
-    'INSERT INTO donation_categories (name, description) VALUES (?, ?)',
-    [name, description]
-  );
+  const category = new DonationCategory({ name, description });
+  await category.save();
 };
 
 export const getDonationCategories = async () => {
-  const [rows] = await db.execute('SELECT * FROM donation_categories ORDER BY name');
-  return rows;
+  return await DonationCategory.find().sort({ name: 1 });
 };
 
-export const updateDonationStatusByReference = async (reference: string, status: string) => {
-  await db.execute(
-    'UPDATE donations SET status = ? WHERE reference = ?',
-    [status, reference]
-  );
-};
+// ------------------------------
+// 5. Stats and Reports
+// ------------------------------
 
 export const getDonationStats = async () => {
-  const [rows]: any = await db.execute(`
-    SELECT COUNT(*) AS totalDonations, SUM(amount) AS totalAmount
-    FROM donations
-    WHERE status = 'success'
-  `);
-  return rows[0];
+  const stats = await Donation.aggregate([
+    { $match: { status: 'success' } },
+    {
+      $group: {
+        _id: null,
+        totalDonations: { $sum: 1 },
+        totalAmount: { $sum: '$amount' },
+      },
+    },
+  ]);
+  return stats[0] || { totalDonations: 0, totalAmount: 0 };
 };
 
 export const getDonationsByCategory = async () => {
-  const [rows] = await db.execute(`
-    SELECT category, COUNT(*) AS count, SUM(amount) AS total
-    FROM donations
-    WHERE status = 'success'
-    GROUP BY category
-  `);
-  return rows;
+  const stats = await Donation.aggregate([
+    { $match: { status: 'success' } },
+    {
+      $group: {
+        _id: '$categoryId',
+        count: { $sum: 1 },
+        total: { $sum: '$amount' },
+      },
+    },
+    {
+      $lookup: {
+        from: 'donationcategories',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'category',
+      },
+    },
+    {
+      $unwind: '$category',
+    },
+    {
+      $project: {
+        category: '$category.name',
+        count: 1,
+        total: 1,
+      },
+    },
+  ]);
+  return stats;
 };
 
 export const getMonthlyDonations = async () => {
-  const [rows] = await db.execute(`
-    SELECT DATE_FORMAT(created_at, '%Y-%m') AS month,
-           COUNT(*) AS count,
-           SUM(amount) AS total
-    FROM donations
-    WHERE status = 'success'
-    GROUP BY month
-    ORDER BY month DESC
-    LIMIT 6
-  `);
-  return rows;
+  return await Donation.aggregate([
+    { $match: { status: 'success' } },
+    {
+      $group: {
+        _id: { $dateToString: { format: '%Y-%m', date: '$created_at' } },
+        count: { $sum: 1 },
+        total: { $sum: '$amount' },
+      },
+    },
+    { $sort: { _id: -1 } },
+    { $limit: 6 },
+  ]);
 };

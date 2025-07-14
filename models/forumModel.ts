@@ -1,178 +1,175 @@
-import db from "../config/db";
+import mongoose from 'mongoose';
 
+// ---------------------
+// Post Schema
+// ---------------------
+const postSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    category: String,
+    status: { type: String, enum: ['active', 'pending', 'deleted'], default: 'pending' },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  },
+  { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
+);
+
+const Post = mongoose.model('Post', postSchema);
+
+// ---------------------
+// Like Schema
+// ---------------------
+const likeSchema = new mongoose.Schema({
+  postId: { type: mongoose.Schema.Types.ObjectId, ref: 'Post', required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+});
+const PostLike = mongoose.model('PostLike', likeSchema);
+
+// ---------------------
+// Comment Schema
+// ---------------------
+const commentSchema = new mongoose.Schema(
+  {
+    postId: { type: mongoose.Schema.Types.ObjectId, ref: 'Post', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    content: { type: String, required: true },
+  },
+  { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
+);
+const Comment = mongoose.model('Comment', commentSchema);
+
+// ---------------------
+// Post Functions
+// ---------------------
 
 export interface CreatePostInput {
   title: string;
   content: string;
   category?: string;
-  userId: number;
+  userId: string;
   status: 'active' | 'pending';
 }
+
 export const createPost = async ({ title, content, category, userId, status }: CreatePostInput) => {
-  const sql = 'INSERT INTO posts (title, content, category, user_id, status) VALUES (?, ?, ?, ?, ?)';
-  const [result]: any = await db.execute(sql, [title, content, category, userId, status]);
-  return { id: result.insertId, title, content, category, userId, status };
+  const post = new Post({ title, content, category, userId, status });
+  await post.save();
+  return post;
 };
 
-// export const getAllApprovedPosts = async () => {
-//   const [rows] = await db.execute(
-//     `SELECT posts.*, users.name AS author 
-//      FROM posts JOIN users ON posts.user_id = users.id 
-//      WHERE posts.status = 'active'
-//      ORDER BY posts.created_at DESC`
-//   );
-//   return rows;
-// };
+export const getAllApprovedPosts = async (userId: string) => {
+  const posts = await Post.find({ status: 'active' })
+    .sort({ created_at: -1 })
+    .populate('userId', 'name');
 
-export const getAllApprovedPosts = async (userId: number) => {
-  const [rows] = await db.execute(`
-    SELECT 
-      posts.*,
-      users.name AS author,
-      (SELECT COUNT(*) FROM post_likes WHERE post_id = posts.id) AS like_count,
-      EXISTS (
-        SELECT 1 FROM post_likes 
-        WHERE post_id = posts.id AND user_id = ?
-      ) AS liked_by_user
-    FROM posts
-    JOIN users ON posts.user_id = users.id
-    WHERE posts.status = 'active'
-    ORDER BY posts.created_at DESC
-  `, [userId]);
+  const postIds = posts.map((post) => post._id);
+  const likes = await PostLike.find({ postId: { $in: postIds } });
 
-  return rows;
+  const likedByUser = await PostLike.find({ userId, postId: { $in: postIds } });
+
+  return posts.map((post) => {
+    const postId = post._id.toString();
+    const likeCount = likes.filter((like) => like.postId.toString() === postId).length;
+    const liked = likedByUser.some((like) => like.postId.toString() === postId);
+    return {
+      ...post.toObject(),
+      like_count: likeCount,
+      liked_by_user: liked,
+      author: (post as any).userId?.name || 'Unknown',
+    };
+  });
 };
 
-export const getPostById = async (id: number) => {
-  const [rows] = await db.execute('SELECT * FROM posts WHERE id = ?', [id]);
-  return (rows as any[])[0];
+export const getPostById = async (id: string) => {
+  return await Post.findById(id);
 };
 
 export const approvePost = async (id: string) => {
-  await db.execute('UPDATE posts SET status = "active" WHERE id = ?', [id]);
+  await Post.findByIdAndUpdate(id, { status: 'active' });
 };
 
 export const deletePost = async (id: string) => {
-  await db.execute('UPDATE posts SET status = "deleted" WHERE id = ?', [id]);
+  await Post.findByIdAndUpdate(id, { status: 'deleted' });
 };
 
-export const likePost = async (postId: number, userId: number) => {
-  await db.execute('INSERT INTO post_likes (post_id, user_id) VALUES (?, ?)', [postId, userId]);
+export const likePost = async (postId: string, userId: string) => {
+  await PostLike.create({ postId, userId });
 };
 
-export const unlikePost = async (postId: number, userId: number) => {
-  await db.execute('DELETE FROM post_likes WHERE post_id = ? AND user_id = ?', [postId, userId]);
+export const unlikePost = async (postId: string, userId: string) => {
+  await PostLike.deleteOne({ postId, userId });
 };
 
-export const hasUserLikedPost = async (postId: number, userId: number): Promise<boolean> => {
-  const [rows] = await db.execute('SELECT * FROM post_likes WHERE post_id = ? AND user_id = ?', [postId, userId]);
-  return (rows as any[]).length > 0;
+export const hasUserLikedPost = async (postId: string, userId: string) => {
+  const liked = await PostLike.exists({ postId, userId });
+  return !!liked;
 };
 
 export const getAllPendingPosts = async () => {
-  const sql = 'SELECT * FROM posts WHERE status = ? ORDER BY created_at DESC';
-  const [rows]: any = await db.execute(sql, ['pending']);
-  return rows;
+  return await Post.find({ status: 'pending' }).sort({ created_at: -1 });
 };
 
- 
-export const getAllApprovedPostsWithLikeInfo = async (userId: number) => {
-  const [rows] = await db.execute(`
-    SELECT 
-      posts.*,
-      users.name AS author,
-      (SELECT COUNT(*) FROM post_likes WHERE post_id = posts.id) AS like_count,
-      EXISTS(
-        SELECT 1 FROM post_likes WHERE post_id = posts.id AND user_id = ?
-      ) AS liked_by_user
-    FROM posts
-    JOIN users ON posts.user_id = users.id
-    WHERE posts.status = 'active'
-    ORDER BY posts.created_at DESC
-  `, [userId]);
+// ---------------------
+// Comments
+// ---------------------
 
-  return rows;
+export const addComment = async (postId: string, userId: string, content: string) => {
+  const comment = new Comment({ postId, userId, content });
+  await comment.save();
+  return comment;
 };
 
-
-export const addComment = async (postId: number, userId: number, content: string) => {
-  const sql = 'INSERT INTO comments (post_id, user_id, content) VALUES (?, ?, ?)';
-  const [result]: any = await db.execute(sql, [postId, userId, content]);
-  return { id: result.insertId, postId, userId, content };
+export const getCommentsByPost = async (postId: string) => {
+  return await Comment.find({ postId }).sort({ created_at: 1 }).populate('userId', 'name');
 };
 
-export const getCommentsByPost = async (postId: number) => {
-  const [rows] = await db.execute(
-    `SELECT comments.*, users.name AS author 
-     FROM comments 
-     JOIN users ON comments.user_id = users.id 
-     WHERE post_id = ? 
-     ORDER BY created_at ASC`,
-    [postId]
-  );
-  return rows;
+export const updateComment = async (commentId: string, userId: string, content: string) => {
+  await Comment.findOneAndUpdate({ _id: commentId, userId }, { content });
 };
 
-export const updateComment = async (commentId: number, userId: number, content: string) => {
-  const sql = 'UPDATE comments SET content = ? WHERE id = ? AND user_id = ?';
-  await db.execute(sql, [content, commentId, userId]);
+export const deleteComment = async (commentId: string, userId: string) => {
+  await Comment.findOneAndDelete({ _id: commentId, userId });
 };
 
-export const deleteComment = async (commentId: number, userId: number) => {
-  const sql = 'DELETE FROM comments WHERE id = ? AND user_id = ?';
-  await db.execute(sql, [commentId, userId]);
-};
-
+// ---------------------
+// Pagination
+// ---------------------
 
 export const getPaginatedPosts = async (page: number, limit: number) => {
-  const offset = (page - 1) * limit;
-  console.log('Running SQL with:', { limit, offset });
-
-  const [rows] = await db.query(
-    `SELECT posts.*, users.name AS author 
-     FROM posts 
-     JOIN users ON posts.user_id = users.id 
-     WHERE posts.status = 'active' 
-     ORDER BY posts.created_at DESC 
-     LIMIT ${limit} OFFSET ${offset}`
-  );
-
-  const [countResult]: any = await db.execute(
-    `SELECT COUNT(*) as total FROM posts WHERE status = 'active'`
-  );
+  const skip = (page - 1) * limit;
+  const [posts, total] = await Promise.all([
+    Post.find({ status: 'active' })
+      .sort({ created_at: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate('userId', 'name'),
+    Post.countDocuments({ status: 'active' }),
+  ]);
 
   return {
-    posts: rows,
-    total: countResult[0].total,
+    posts: posts.map((post) => ({
+      ...post.toObject(),
+      author: (post as any).userId?.name || 'Unknown',
+    })),
+    total,
     page,
-    pages: Math.ceil(countResult[0].total / limit),
+    pages: Math.ceil(total / limit),
   };
 };
 
-
-export const getPaginatedComments = async (postId: number, page: number, limit: number) => {
-  const offset = (page - 1) * limit;
-  console.log('Running comment SQL with:', { postId, limit, offset });
-
-  const [rows] = await db.query(
-    `SELECT comments.*, users.name AS author 
-     FROM comments 
-     JOIN users ON comments.user_id = users.id 
-     WHERE comments.post_id = ? 
-     ORDER BY comments.created_at ASC 
-     LIMIT ${limit} OFFSET ${offset}`,
-    [postId]
-  );
-
-  const [countResult]: any = await db.execute(
-    `SELECT COUNT(*) as total FROM comments WHERE post_id = ?`,
-    [postId]
-  );
+export const getPaginatedComments = async (postId: string, page: number, limit: number) => {
+  const skip = (page - 1) * limit;
+  const [comments, total] = await Promise.all([
+    Comment.find({ postId }).sort({ created_at: 1 }).skip(skip).limit(limit).populate('userId', 'name'),
+    Comment.countDocuments({ postId }),
+  ]);
 
   return {
-    comments: rows,
-    total: countResult[0].total,
+    comments: comments.map((comment) => ({
+      ...comment.toObject(),
+      author: (comment as any).userId?.name || 'Unknown',
+    })),
+    total,
     page,
-    pages: Math.ceil(countResult[0].total / limit),
+    pages: Math.ceil(total / limit),
   };
 };

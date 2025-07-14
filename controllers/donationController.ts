@@ -59,7 +59,7 @@ export const startDonation = async (req: AuthRequest, res: Response) => {
     const init = await initializePayment(email, amount);
     const reference = init.data.reference;
 
-    await createDonation(Number(userId), categoryId, amount, reference);
+    await createDonation((userId), categoryId, amount, reference);
 
     res.json({ authorization_url: init.data.authorization_url });
   } catch (err) {
@@ -110,7 +110,7 @@ export const confirmDonation = async (req: Request, res: Response) => {
 };
 
 export const userDonationHistory = async (req: AuthRequest, res: Response) => {
-  const donations = await getUserDonations(Number(req.user!.id));
+  const donations = await getUserDonations((req.user!.id));
   res.json(donations);
 };
 

@@ -15,12 +15,27 @@ import churchInfoRoutes from './routes/churchInfoRoutes';
 import announcementRoutes from './routes/announcementRoutes';
 import eventRoutes from './routes/eventRoutes';
 import mediaRoutes from './routes/mediaRoutes';
-import donationRoutes from './routes/donationROutes';
+import donationRoutes from './routes/donationRoutes';
 import userRoutes from './routes/userRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import feedbackRoutes from './routes/feedbackRoutes';
-
+import connectDB from './config/db';
 dotenv.config();
+ 
+
+// Connect to MongoDB
+connectDB()
+  .then(() => {
+    // Start the server only after DB connection is successful
+    server.listen(PORT, () => {
+      console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('❌ Failed to connect to MongoDB', err);
+    process.exit(1); // Exit if DB connection fails
+  });
+
 
 const app: Application = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
@@ -43,6 +58,16 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/', (req: Request, res: Response) => {
   res.send('✅ Church App API is running...');
 });
+
+app.get('/api/db-test', async (req, res) => {
+  const mongoose = require('mongoose');
+  const connection = mongoose.connection;
+  res.json({
+    status: connection.readyState === 1 ? 'connected' : 'not connected',
+    dbName: connection.name,
+  });
+});
+
 
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
@@ -70,10 +95,7 @@ app.get('/api/online-users', (req: Request, res: Response) => {
 });
 
 
-server.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-});
-
+ 
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err);
 });

@@ -1,20 +1,17 @@
-import db from '../config/db';
+import mongoose from 'mongoose';
 
-export const getChurchInfo = async () => {
-  const [rows] = await db.execute('SELECT * FROM church_info LIMIT 1');
-  return (rows as any[])[0]; // returns the first record
-};
+const churchInfoSchema = new mongoose.Schema(
+  {
+    history: { type: String },
+    mission: { type: String },
+    vision: { type: String },
+    doctrines: { type: String },
+    leadership: { type: String },
+  },
+  {
+    timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
+  }
+);
 
-export const updateChurchInfo = async (data: {
-  history?: string;
-  mission?: string;
-  vision?: string;
-  doctrines?: string;
-  leadership?: string;
-}) => {
-  const { history, mission, vision, doctrines, leadership } = data;
-  return await db.execute(
-    `UPDATE church_info SET history=?, mission=?, vision=?, doctrines=?, leadership=? WHERE id=1`,
-    [history, mission, vision, doctrines, leadership]
-  );
-};
+const ChurchInfo = mongoose.model('ChurchInfo', churchInfoSchema);
+export default ChurchInfo;

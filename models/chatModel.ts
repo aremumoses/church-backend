@@ -1,73 +1,103 @@
-import db from '../config/db';
+import mongoose from 'mongoose';
+import { Types } from 'mongoose';
 
-// export const sendMessage = async (senderId: number, receiverId: number, message: string) => {
-//   await db.execute(
-//     'INSERT INTO messages (sender_id, receiver_id, message) VALUES (?, ?, ?)',
-//     [senderId, receiverId, message]
-//   );
-// };
+const messageSchema = new mongoose.Schema(
+  {
+    senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    message: { type: String, required: true },
+    status: { type: String, enum: ['sent', 'read'], default: 'sent' },
+  },
+  {
+    timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
+  }
+);
 
-export const sendMessage = async (senderId: number, receiverId: number, message: string) => {
-  await db.execute(
-    'INSERT INTO messages (sender_id, receiver_id, message, status) VALUES (?, ?, ?, ?)',
-    [senderId, receiverId, message, 'sent']
-  );
+const Message = mongoose.model('Message', messageSchema);
+
+export default Message;
+
+// ✅ Equivalent to sendMessage in MySQL
+export const sendMessage = async (
+  senderId: string | Types.ObjectId,
+  receiverId: string | Types.ObjectId,
+  message: string
+) => {
+  await Message.create({ senderId, receiverId, message, status: 'sent' });
 };
 
-
-export const getConversationWithUser = async (userId: number, otherUserId: number) => {
-  const [rows] = await db.query(
-    `SELECT * FROM messages 
-     WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
-     ORDER BY created_at ASC`,
-    [userId, otherUserId, otherUserId, userId]
-  );
-  return rows;
+// ✅ Equivalent to getConversationWithUser in MySQL
+export const getConversationWithUser = async (
+  userId: string | Types.ObjectId,
+  otherUserId: string | Types.ObjectId
+) => {
+  return await Message.find({
+    $or: [
+      { senderId: userId, receiverId: otherUserId },
+      { senderId: otherUserId, receiverId: userId }
+    ]
+  }).sort({ created_at: 1 });
 };
 
-export const getConversationList = async (userId: number) => {
-  const [rows] = await db.query(
-    `SELECT u.id, u.name, u.email, m.message, m.created_at
-     FROM (
-       SELECT 
-         CASE 
-           WHEN sender_id = ? THEN receiver_id
-           ELSE sender_id
-         END AS user_id,
-         MAX(created_at) AS last_message_time
-       FROM messages
-       WHERE sender_id = ? OR receiver_id = ?
-       GROUP BY user_id
-     ) AS conv
-     JOIN users u ON u.id = conv.user_id
-     JOIN messages m ON (
-       (m.sender_id = ? AND m.receiver_id = conv.user_id) 
-       OR (m.sender_id = conv.user_id AND m.receiver_id = ?)
-     ) AND m.created_at = conv.last_message_time
-     ORDER BY m.created_at DESC`,
-    [userId, userId, userId, userId, userId]
-  );
-  return rows;
+// ✅ Equivalent to getConversationList in MySQL
+export const getConversationList = async (userId: string | Types.ObjectId) => {
+  const messages = await Message.aggregate([
+    {
+      $match: {
+        $or: [{ senderId: new mongoose.Types.ObjectId(userId) }, { receiverId: new mongoose.Types.ObjectId(userId) }]
+      }
+    },
+    {
+      $sort: { created_at: -1 }
+    },
+    {
+      $group: {
+        _id: {
+          $cond: [
+            { $eq: ['$senderId', new mongoose.Types.ObjectId(userId)] },
+            '$receiverId',
+            '$senderId'
+          ]
+        },
+        lastMessage: { $first: '$$ROOT' }
+      }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'user'
+      }
+    },
+    {
+      $unwind: '$user'
+    },
+    {
+      $project: {
+        userId: '$_id',
+        name: '$user.name',
+        email: '$user.email',
+        message: '$lastMessage.message',
+        created_at: '$lastMessage.created_at'
+      }
+    },
+    { $sort: { created_at: -1 } }
+  ]);
+
+  return messages;
 };
 
+// ✅ Equivalent to getChatHistory (identical to getConversationWithUser)
+export const getChatHistory = getConversationWithUser;
 
-export const getChatHistory = async (user1: number, user2: number) => {
-  const [rows] = await db.execute(
-    `SELECT * FROM messages
-     WHERE (sender_id = ? AND receiver_id = ?)
-        OR (sender_id = ? AND receiver_id = ?)
-     ORDER BY created_at ASC`,
-    [user1, user2, user2, user1]
-  );
-
-  return rows;
-};
-
-export const markMessagesAsRead = async (senderId: number, receiverId: number) => {
-  await db.execute(
-    `UPDATE messages
-     SET status = 'read'
-     WHERE sender_id = ? AND receiver_id = ? AND status != 'read'`,
-    [senderId, receiverId]
+// ✅ Equivalent to markMessagesAsRead
+export const markMessagesAsRead = async (
+  senderId: string | Types.ObjectId,
+  receiverId: string | Types.ObjectId
+) => {
+  await Message.updateMany(
+    { senderId, receiverId, status: { $ne: 'read' } },
+    { $set: { status: 'read' } }
   );
 };
