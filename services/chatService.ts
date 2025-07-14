@@ -1,6 +1,7 @@
-import mongoose from 'mongoose';
+import mongoose, { PipelineStage } from 'mongoose';
 import Message from '../models/chatModel';
 
+// Send a new message
 export const sendMessage = async (
   senderId: string,
   receiverId: string,
@@ -10,7 +11,7 @@ export const sendMessage = async (
   await msg.save();
 };
 
-// Get full chat between two users
+// Get full chat between two users (by time ascending)
 export const getConversationWithUser = async (
   userId: string,
   otherUserId: string
@@ -20,14 +21,14 @@ export const getConversationWithUser = async (
       { senderId: userId, receiverId: otherUserId },
       { senderId: otherUserId, receiverId: userId },
     ],
-  }).sort({ created_at: 1 }); // ascending by time
+  }).sort({ created_at: 1 });
 };
 
-// Get recent conversations with last message
+// Get recent conversations for a user, grouped by contact
 export const getConversationList = async (userId: string) => {
   const objectId = new mongoose.Types.ObjectId(userId);
 
-  const pipeline = [
+  const pipeline: PipelineStage[] = [
     {
       $match: {
         $or: [
@@ -54,7 +55,7 @@ export const getConversationList = async (userId: string) => {
     },
     {
       $lookup: {
-        from: 'users',
+        from: 'users', // must match your MongoDB collection name exactly
         localField: '_id',
         foreignField: '_id',
         as: 'user',
@@ -80,17 +81,18 @@ export const getConversationList = async (userId: string) => {
   return await Message.aggregate(pipeline);
 };
 
-// Same as getConversationWithUser (alias for clarity)
+// Get all messages with a specific user (alias for clarity)
 export const getChatHistory = getConversationWithUser;
 
+// Mark messages from sender to receiver as "read"
 export const markMessagesAsRead = async (
   senderId: string,
   receiverId: string
 ) => {
   await Message.updateMany(
     {
-      senderId,
-      receiverId,
+      senderId: new mongoose.Types.ObjectId(senderId),
+      receiverId: new mongoose.Types.ObjectId(receiverId),
       status: { $ne: 'read' },
     },
     {
