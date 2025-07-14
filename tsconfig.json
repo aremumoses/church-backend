@@ -2,12 +2,12 @@
   "compilerOptions": {
     "target": "ES6",
     "module": "commonjs",
-    "rootDir": ".",
-    "outDir": "dist",
+    "rootDir": ".",           // Compiles everything from the root
+    "outDir": "dist",         // Output will be in dist/
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "include": ["*.ts"],
-  "exclude": ["dist"]
+  "include": ["**/*.ts"],     // <-- Include all .ts files in all folders
+  "exclude": ["dist", "node_modules"]
 }
