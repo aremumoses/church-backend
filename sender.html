@@ -1,0 +1,78 @@
+ 
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sender</title>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+</head>
+<body>
+  <h2>Sender Chat</h2>
+
+  <div>
+    <input id="message" placeholder="Type a message" oninput="startTyping()" />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <p id="status"></p>
+  <p id="received"></p>
+  <p id="online"></p>
+
+  <script>
+    const socket = io('http://localhost:5001', {
+      auth: {
+               token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NCwicm9sZSI6InVzZXIiLCJpYXQiOjE3NTIwNzUzNzIsImV4cCI6MTc1NDY2NzM3Mn0.fuyY80mSrSl90frUvCvUWrbuF1sox4GMnt6mFQ77Qd8'
+
+      }
+    });
+
+    const senderId = 4;
+    const receiverId = 7;
+    let typingTimeout;
+
+    socket.on('connect', () => {
+      console.log('Sender connected!');
+    });
+
+    socket.on('receive_message', (data) => {
+      document.getElementById('received').innerText = 'Received: ' + data.message;
+    });
+socket.on('chat_notifications', (notifications) => {
+  console.log('Unread notifications:', notifications);
+});
+
+socket.emit('mark_notifications_as_read');
+
+    socket.on('user_typing', ({ senderId }) => {
+      document.getElementById('status').innerText = `User ${senderId} is typing...`;
+    });
+
+    socket.on('user_stop_typing', ({ senderId }) => {
+      document.getElementById('status').innerText = '';
+    });
+
+    socket.on('messages_read_by_receiver', ({ from }) => {
+      console.log(`Your messages were read by User ${from}`);
+    });
+
+    socket.on('online_users_list', ({ users }) => {
+      document.getElementById('online').innerText =
+        'Online Users: ' + users.map(u => `${u.name} (${u.id})`).join(', ');
+    });
+
+    function sendMessage() {
+      const message = document.getElementById('message').value;
+      socket.emit('send_message', { senderId, receiverId, message });
+      socket.emit('stop_typing', { senderId, receiverId });
+    }
+
+    function startTyping() {
+      socket.emit('typing', { senderId, receiverId });
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        socket.emit('stop_typing', { senderId, receiverId });
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

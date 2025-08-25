@@ -1,0 +1,146 @@
+<!--  
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Receiver</title>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+</head>
+<body>
+  <h2>Receiver Chat</h2>
+
+  <div>
+    <input id="message" placeholder="Type a reply" oninput="startTyping()" />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <p id="status"></p>
+  <p id="received"></p>
+  <p id="online"></p>
+
+  <script>
+    const socket = io('http://localhost:5001', {
+      auth: {
+              token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Nywicm9sZSI6InN1cGVyYWRtaW4iLCJuYW1lIjoiSm9obiBBZW11IiwiaWF0IjoxNzUyMDk1MjcyLCJleHAiOjE3NTQ2ODcyNzJ9.3-nIGIx8MZ1gaOCaIx1wiZmiUS5vn1vzuK_L0Po55Og'
+
+      }
+    });
+
+    const senderId = 7;
+    const receiverId = 4;
+    let typingTimeout;
+
+    socket.on('connect', () => {
+      console.log('Receiver connected!');
+    });
+
+    socket.on('receive_message', (data) => {
+      document.getElementById('received').innerText = 'Received: ' + data.message;
+      socket.emit('mark_as_read', { senderId: receiverId, receiverId: senderId });
+    });
+
+    socket.on('chat_notifications', (notifications) => {
+  console.log('Unread notifications:', notifications);
+});
+
+socket.emit('mark_notifications_as_read');
+
+    socket.on('user_typing', ({ senderId }) => {
+      document.getElementById('status').innerText = `User ${senderId} is typing...`;
+    });
+
+    socket.on('user_stop_typing', ({ senderId }) => {
+      document.getElementById('status').innerText = '';
+    });
+
+    socket.on('messages_read_by_receiver', ({ from }) => {
+      console.log(`Your messages were read by User ${from}`);
+    });
+
+    socket.on('online_users_list', ({ users }) => {
+      document.getElementById('online').innerText =
+        'Online Users: ' + users.map(u => `${u.name} (${u.id})`).join(', ');
+    });
+
+    function sendMessage() {
+      const message = document.getElementById('message').value;
+      socket.emit('send_message', { senderId, receiverId, message });
+      socket.emit('stop_typing', { senderId, receiverId });
+    }
+
+    function startTyping() {
+      socket.emit('typing', { senderId, receiverId });
+      clearTimeout(typingTimeout);
+      typingTimeout = setTimeout(() => {
+        socket.emit('stop_typing', { senderId, receiverId });
+      }, 1000);
+    }
+  </script>
+</body>
+</html> -->
+
+
+<!-- <!DOCTYPE html>
+<html>
+<head>
+  <title>Receiver (Offline)</title>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+</head>
+<body>
+  <h2>Receiver Simulated Offline</h2>
+  <p>This user will disconnect instantly.</p>
+
+  <script>
+    const socket = io('http://localhost:5001', {
+      auth: {
+                    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Nywicm9sZSI6InN1cGVyYWRtaW4iLCJuYW1lIjoiSm9obiBBZW11IiwiaWF0IjoxNzUyMDk1MjcyLCJleHAiOjE3NTQ2ODcyNzJ9.3-nIGIx8MZ1gaOCaIx1wiZmiUS5vn1vzuK_L0Po55Og'
+
+      }
+    });
+
+    socket.on('connect', () => {
+      console.log('Receiver connected. Disconnecting now to simulate offline...');
+      socket.disconnect();
+    });
+  </script>
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Receiver Online</title>
+  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+</head>
+<body>
+  <h2>Receiver Coming Online</h2>
+  <ul id="notifications"></ul>
+
+  <script>
+    const socket = io('http://localhost:5000', {
+      auth: {
+                            token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Nywicm9sZSI6InN1cGVyYWRtaW4iLCJuYW1lIjoiSm9obiBBZW11IiwiaWF0IjoxNzUyMDk1MjcyLCJleHAiOjE3NTQ2ODcyNzJ9.3-nIGIx8MZ1gaOCaIx1wiZmiUS5vn1vzuK_L0Po55Og'
+
+      }
+    });
+
+    socket.on('connect', () => {
+      console.log('Receiver is now online');
+    });
+
+    socket.on('chat_notifications', (notifications) => {
+      console.log('Received notifications:', notifications);
+      const ul = document.getElementById('notifications');
+      ul.innerHTML = '';
+      notifications.forEach((n) => {
+        const li = document.createElement('li');
+        li.textContent = `${n.message} (from user ${n.sender_id})`;
+        ul.appendChild(li);
+      });
+    });
+
+    // Optional: mark notifications as read
+    socket.emit('mark_notifications_as_read');
+  </script>
+</body>
+</html>
