@@ -57,7 +57,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get('/', (req: Request, res: Response) => {
-  res.send('✅ Church App API is running...');
+  res.send('✅ Church App API is running 2...');
 });
 
 app.get('/api/db-test', async (req, res) => {
