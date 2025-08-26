@@ -1,0 +1,22 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const profileController_1 = require("../controllers/profileController");
+const authMiddleware_1 = require("../middleware/authMiddleware");
+const profileController_2 = require("../controllers/profileController");
+const roleMiddleware_1 = require("../middleware/roleMiddleware");
+const profileController_3 = require("../controllers/profileController");
+const roleMiddleware_2 = require("../middleware/roleMiddleware");
+const profileController_4 = require("../controllers/profileController");
+const profileController_5 = require("../controllers/profileController");
+const router = express_1.default.Router();
+router.get('/me', authMiddleware_1.protect, profileController_1.getMyProfile);
+router.patch('/update', authMiddleware_1.protect, profileController_1.updateMyProfile);
+router.get('/:id', authMiddleware_1.protect, profileController_2.getUserPublicProfile);
+router.patch('/admin-update/:id', authMiddleware_1.protect, roleMiddleware_1.adminOnly, profileController_3.adminUpdateUserProfile);
+router.patch('/role/:id', authMiddleware_1.protect, roleMiddleware_2.superAdminOnly, profileController_4.updateUserRoleController);
+router.patch('/deactivate/:id', authMiddleware_1.protect, roleMiddleware_2.superAdminOnly, profileController_5.updateUserStatusController);
+exports.default = router;

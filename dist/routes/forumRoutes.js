@@ -1,0 +1,22 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const forumController_1 = require("../controllers/forumController");
+const authMiddleware_1 = require("../middleware/authMiddleware");
+const roleMiddleware_1 = require("../middleware/roleMiddleware");
+const forumController_2 = require("../controllers/forumController");
+const router = express_1.default.Router();
+router.post('/posts', authMiddleware_1.protect, forumController_1.createForumPost);
+router.get('/posts', forumController_1.getApprovedPosts);
+router.patch('/posts/approve/:id', authMiddleware_1.protect, roleMiddleware_1.adminOnly, forumController_1.approveForumPost);
+router.delete('/posts/:id', authMiddleware_1.protect, roleMiddleware_1.adminOnly, forumController_1.deleteForumPost);
+router.patch('/posts/like/:id', authMiddleware_1.protect, forumController_1.likeForumPost);
+router.get('/posts/pending', authMiddleware_1.protect, forumController_2.getPendingPosts);
+router.post('/posts/:postId/comments', authMiddleware_1.protect, forumController_1.createComment);
+router.get('/posts/:postId/comments', forumController_1.getPostComments);
+router.patch('/comments/:commentId', authMiddleware_1.protect, forumController_1.editComment);
+router.delete('/comments/:commentId', authMiddleware_1.protect, forumController_1.removeComment);
+exports.default = router;
