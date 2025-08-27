@@ -102,7 +102,7 @@ export const getPostComments = async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string, 10) || 1;
   const limit = parseInt(req.query.limit as string, 10) || 10;
 
-  if ( (postId) || isNaN(page) || isNaN(limit)) {
+  if ( (!postId) || isNaN(page) || isNaN(limit)) {
     return res.status(400).json({ message: 'Invalid query parameters' });
   }
 

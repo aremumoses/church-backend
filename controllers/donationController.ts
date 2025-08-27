@@ -38,34 +38,34 @@ export const getDonationAnalytics = async (req: Request, res: Response) => {
 
 
 export const startDonation = async (req: AuthRequest, res: Response) => {
-  // if (!req.body) {
-  //   console.error('❌ req.body is undefined!');
-  //   return res.status(400).json({ message: 'Request body is missing.' });
-  // }
+  if (!req.body) {
+    console.error('❌ req.body is undefined!');
+    return res.status(400).json({ message: 'Request body is missing.' });
+  }
 
-  // const { amount, categoryId } = req.body;
+  const { amount, categoryId } = req.body;
 
-  // if (!amount || !categoryId) {
-  //   return res.status(400).json({ message: 'Amount and categoryId are required.' });
-  // }
+  if (!amount || !categoryId) {
+    return res.status(400).json({ message: 'Amount and categoryId are required.' });
+  }
 
-  // const { email, id: userId } = req.user!;
+  const { email, id: userId } = req.user!;
 
-  // if (!email || !userId) {
-  //   return res.status(400).json({ message: 'User email and ID are required to start a donation.' });
-  // }
+  if (!email || !userId) {
+    return res.status(400).json({ message: 'User email and ID are required to start a donation.' });
+  }
 
-  // try {
-  //   const init = await initializePayment(email, amount);
-  //   const reference = init.data.reference;
+  try {
+    const init = await initializePayment(email, amount);
+    const reference = init.data.reference;
 
-  //   await createDonation((userId), categoryId, amount, reference);
+    await createDonation((userId), categoryId, amount, reference);
 
-  //   res.json({ authorization_url: init.data.authorization_url });
-  // } catch (err) {
-  //   console.error('💥 Error initializing donation:', err);
-  //   res.status(500).json({ message: 'Donation initialization failed.' });
-  // }
+    res.json({ authorization_url: init.data.authorization_url });
+  } catch (err) {
+    console.error('💥 Error initializing donation:', err);
+    res.status(500).json({ message: 'Donation initialization failed.' });
+  }
 };
 
 export const handlePaystackWebhook = async (req: Request, res: Response) => {

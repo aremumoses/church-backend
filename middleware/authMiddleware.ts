@@ -32,6 +32,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: string;
     role: string;
+     email: string; 
   };
 }
 
@@ -41,7 +42,7 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction) => 
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
-    req.user = { id: decoded.id, role: decoded.role };
+    req.user = { id: decoded.id, role: decoded.role, email: decoded.email };
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Invalid token' });
