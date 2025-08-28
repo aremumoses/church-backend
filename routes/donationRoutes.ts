@@ -22,5 +22,5 @@ router.get('/categories', getCategories);
 router.post('/categories', protect, addCategory);
 router.post('/webhook', express.raw({ type: 'application/json' }), handlePaystackWebhook);
 
-// router.get('/analytics', protect, authorize(['admin', 'superadmin']), getDonationAnalytics);
+router.get('/analytics', protect, getDonationAnalytics);
 export default router;

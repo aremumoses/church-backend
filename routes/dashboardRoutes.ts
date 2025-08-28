@@ -4,6 +4,6 @@ import { protect, authorize } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
-// router.get('/overview', protect, authorize(['admin', 'superadmin']), getDashboardOverview);
+router.get('/overview', protect, getDashboardOverview);
 
 export default router;

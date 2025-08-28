@@ -1,4 +1,4 @@
-<!--  
+ 
 <!DOCTYPE html>
 <html>
 <head>
@@ -20,13 +20,13 @@
   <script>
     const socket = io('http://localhost:5001', {
       auth: {
-              token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Nywicm9sZSI6InN1cGVyYWRtaW4iLCJuYW1lIjoiSm9obiBBZW11IiwiaWF0IjoxNzUyMDk1MjcyLCJleHAiOjE3NTQ2ODcyNzJ9.3-nIGIx8MZ1gaOCaIx1wiZmiUS5vn1vzuK_L0Po55Og'
+              token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YWRiNDUxNjYyMmVkY2Q1MTk5NjczYyIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiJBeWVidXNpIFNhbXVlbCIsImVtYWlsIjoiYXllYnVzaXNhbXVlbEBnbWFpbC5jb20iLCJpYXQiOjE3NTYyMTU1ODIsImV4cCI6MTc1ODgwNzU4Mn0.AN35LugUeXJjzPK762WEC8AmTA2r7qrE--TvvLFEDNw'
 
       }
     });
 
-    const senderId = 7;
-    const receiverId = 4;
+    const senderId = '68adb5a36622edcd51996741';
+    const receiverId = '68adb4516622edcd5199673c';
     let typingTimeout;
 
     socket.on('connect', () => {
@@ -103,10 +103,10 @@ socket.emit('mark_notifications_as_read');
     });
   </script>
 </body>
-</html> -->
+</html>
 
 
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
 <head>
   <title>Receiver Online</title>
@@ -143,4 +143,4 @@ socket.emit('mark_notifications_as_read');
     socket.emit('mark_notifications_as_read');
   </script>
 </body>
-</html>
+</html> -->

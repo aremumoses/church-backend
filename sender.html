@@ -21,13 +21,13 @@
   <script>
     const socket = io('http://localhost:5001', {
       auth: {
-               token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NCwicm9sZSI6InVzZXIiLCJpYXQiOjE3NTIwNzUzNzIsImV4cCI6MTc1NDY2NzM3Mn0.fuyY80mSrSl90frUvCvUWrbuF1sox4GMnt6mFQ77Qd8'
+               token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YWRiNWEzNjYyMmVkY2Q1MTk5Njc0MSIsInJvbGUiOiJzdXBlcmFkbWluIiwibmFtZSI6Ik9sYWdib3llIFZpY3RvciIsImVtYWlsIjoib2xhZ2JveWV2aWN0b3JAZ21haWwuY29tIiwiaWF0IjoxNzU2MjE1NjM1LCJleHAiOjE3NTg4MDc2MzV9.-rBdLxooDAlRimwakgiyKPPyCuUWiwi4p7kW-ILcUh0'
 
       }
     });
 
-    const senderId = 4;
-    const receiverId = 7;
+    const senderId = '68adb5a36622edcd51996741';
+    const receiverId = '68adb4516622edcd5199673c';
     let typingTimeout;
 
     socket.on('connect', () => {

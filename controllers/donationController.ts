@@ -36,37 +36,72 @@ export const getDonationAnalytics = async (req: Request, res: Response) => {
 };
 
 
+// Works with any of these shapes:
+// 1) { data: { status: true, data: { authorization_url, reference } } }  // raw axios response
+// 2) { status: true, data: { authorization_url, reference } }            // already unwrapped once
+// 3) { authorization_url, reference }                                    // fully unwrapped (your logs show this)
 
 export const startDonation = async (req: AuthRequest, res: Response) => {
   if (!req.body) {
-    console.error('❌ req.body is undefined!');
     return res.status(400).json({ message: 'Request body is missing.' });
   }
 
   const { amount, categoryId } = req.body;
-
   if (!amount || !categoryId) {
     return res.status(400).json({ message: 'Amount and categoryId are required.' });
   }
 
-  const { email, id: userId } = req.user!;
-
+  const { email, id: userId } = req.user || {};
   if (!email || !userId) {
     return res.status(400).json({ message: 'User email and ID are required to start a donation.' });
   }
 
   try {
-    const init = await initializePayment(email, amount);
-    const reference = init.data.reference;
+    console.log(`🔹 Initializing payment for ${email}, Amount: ${amount}, Category: ${categoryId}`);
 
-    await createDonation((userId), categoryId, amount, reference);
+    const init = await initializePayment(email, amount); // ensure initializePayment handles kobo conversion
 
-    res.json({ authorization_url: init.data.authorization_url });
-  } catch (err) {
-    console.error('💥 Error initializing donation:', err);
-    res.status(500).json({ message: 'Donation initialization failed.' });
+    // --- Normalize Paystack init response shape ---
+    let authorization_url: string | undefined;
+    let reference: string | undefined;
+
+    if (init?.authorization_url && init?.reference) {
+      // fully unwrapped object (what your console showed)
+      ({ authorization_url, reference } = init);
+    } else if (init?.data?.authorization_url && init?.data?.reference) {
+      // unwrapped one level
+      ({ authorization_url, reference } = init.data);
+    } else if (init?.data?.data?.authorization_url && init?.data?.data?.reference) {
+      // raw axios shape
+      ({ authorization_url, reference } = init.data.data);
+      // optional: if you want to keep a status check, accept true OR undefined
+      if (init.data.status === false) {
+        return res.status(502).json({ message: init.data.message || 'Payment initialization failed.' });
+      }
+    }
+
+    if (!authorization_url || !reference) {
+      console.error('❌ Unexpected Paystack init response shape:', init);
+      return res.status(502).json({ message: 'Payment initialization failed.' });
+    }
+    // --- end normalization ---
+
+    // Save the donation (store original amount you showed the user)
+    await createDonation(userId, categoryId, amount, reference);
+
+    return res.status(201).json({
+      message: 'Payment initialized successfully.',
+      authorization_url,
+      reference,
+    });
+  } catch (err: any) {
+    console.error('💥 Error initializing donation:', err?.response?.data || err?.message || err);
+    return res.status(500).json({ message: 'Donation initialization failed.' });
   }
 };
+
+
+
 
 export const handlePaystackWebhook = async (req: Request, res: Response) => {
   const secret = process.env.PAYSTACK_SECRET_KEY!;

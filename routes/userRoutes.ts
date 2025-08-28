@@ -5,7 +5,6 @@ import { listUsersByRole } from '../controllers/userController';
 
 const router = express.Router();
 
-// GET /api/users/role/:role (e.g. /api/users/role/admin)
-// router.get('/role/:role', protect, authorize(['admin', 'superadmin']), listUsersByRole);
+router.get('/role/:role', protect, listUsersByRole);
 
 export default router;

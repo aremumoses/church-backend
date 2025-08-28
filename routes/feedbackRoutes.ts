@@ -8,9 +8,9 @@ const router = express.Router();
 router.post('/', protect, submitFeedback);
 
 // 🔍 Admin/SuperAdmin view all feedback
-// router.get('/', protect, authorize(['admin', 'superadmin']), getAllFeedback);
+router.get('/', protect, getAllFeedback);
 
 // 🛠 Admin/SuperAdmin update feedback status
-// router.patch('/:id/status', protect, authorize(['admin', 'superadmin']), updateFeedbackStatus);
+router.patch('/:id/status', protect, updateFeedbackStatus);
 
 export default router;
