@@ -12,23 +12,31 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateChurchInfo = exports.getChurchInfo = void 0;
+exports.updateChurchInfo = exports.createChurchInfo = exports.getChurchInfo = void 0;
 const churchInfoModel_1 = __importDefault(require("../models/churchInfoModel"));
+// Get church information
 const getChurchInfo = () => __awaiter(void 0, void 0, void 0, function* () {
-    const info = yield churchInfoModel_1.default.findOne();
-    return info;
+    return yield churchInfoModel_1.default.findOne();
 });
 exports.getChurchInfo = getChurchInfo;
+// Create church information (if not exists)
+const createChurchInfo = (data) => __awaiter(void 0, void 0, void 0, function* () {
+    // Ensure only one record exists
+    const existingInfo = yield churchInfoModel_1.default.findOne();
+    if (existingInfo) {
+        throw new Error('Church information already exists. Use update instead.');
+    }
+    const info = new churchInfoModel_1.default(data);
+    return yield info.save();
+});
+exports.createChurchInfo = createChurchInfo;
+// Update church information
 const updateChurchInfo = (data) => __awaiter(void 0, void 0, void 0, function* () {
     let info = yield churchInfoModel_1.default.findOne();
     if (!info) {
-        // Create new record if none exists
-        info = new churchInfoModel_1.default(data);
+        throw new Error('No church info found. Create it first.');
     }
-    else {
-        // Update existing record
-        Object.assign(info, data);
-    }
+    Object.assign(info, data);
     return yield info.save();
 });
 exports.updateChurchInfo = updateChurchInfo;

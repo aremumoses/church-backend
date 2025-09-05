@@ -35,28 +35,62 @@ const getDonationAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, fun
     }
 });
 exports.getDonationAnalytics = getDonationAnalytics;
+// Works with any of these shapes:
+// 1) { data: { status: true, data: { authorization_url, reference } } }  // raw axios response
+// 2) { status: true, data: { authorization_url, reference } }            // already unwrapped once
+// 3) { authorization_url, reference }                                    // fully unwrapped (your logs show this)
 const startDonation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    // if (!req.body) {
-    //   console.error('❌ req.body is undefined!');
-    //   return res.status(400).json({ message: 'Request body is missing.' });
-    // }
-    // const { amount, categoryId } = req.body;
-    // if (!amount || !categoryId) {
-    //   return res.status(400).json({ message: 'Amount and categoryId are required.' });
-    // }
-    // const { email, id: userId } = req.user!;
-    // if (!email || !userId) {
-    //   return res.status(400).json({ message: 'User email and ID are required to start a donation.' });
-    // }
-    // try {
-    //   const init = await initializePayment(email, amount);
-    //   const reference = init.data.reference;
-    //   await createDonation((userId), categoryId, amount, reference);
-    //   res.json({ authorization_url: init.data.authorization_url });
-    // } catch (err) {
-    //   console.error('💥 Error initializing donation:', err);
-    //   res.status(500).json({ message: 'Donation initialization failed.' });
-    // }
+    var _a, _b, _c, _d, _e, _f, _g;
+    if (!req.body) {
+        return res.status(400).json({ message: 'Request body is missing.' });
+    }
+    const { amount, categoryId } = req.body;
+    if (!amount || !categoryId) {
+        return res.status(400).json({ message: 'Amount and categoryId are required.' });
+    }
+    const { email, id: userId } = req.user || {};
+    if (!email || !userId) {
+        return res.status(400).json({ message: 'User email and ID are required to start a donation.' });
+    }
+    try {
+        console.log(`🔹 Initializing payment for ${email}, Amount: ${amount}, Category: ${categoryId}`);
+        const init = yield (0, paystack_1.initializePayment)(email, amount); // ensure initializePayment handles kobo conversion
+        // --- Normalize Paystack init response shape ---
+        let authorization_url;
+        let reference;
+        if ((init === null || init === void 0 ? void 0 : init.authorization_url) && (init === null || init === void 0 ? void 0 : init.reference)) {
+            // fully unwrapped object (what your console showed)
+            ({ authorization_url, reference } = init);
+        }
+        else if (((_a = init === null || init === void 0 ? void 0 : init.data) === null || _a === void 0 ? void 0 : _a.authorization_url) && ((_b = init === null || init === void 0 ? void 0 : init.data) === null || _b === void 0 ? void 0 : _b.reference)) {
+            // unwrapped one level
+            ({ authorization_url, reference } = init.data);
+        }
+        else if (((_d = (_c = init === null || init === void 0 ? void 0 : init.data) === null || _c === void 0 ? void 0 : _c.data) === null || _d === void 0 ? void 0 : _d.authorization_url) && ((_f = (_e = init === null || init === void 0 ? void 0 : init.data) === null || _e === void 0 ? void 0 : _e.data) === null || _f === void 0 ? void 0 : _f.reference)) {
+            // raw axios shape
+            ({ authorization_url, reference } = init.data.data);
+            // optional: if you want to keep a status check, accept true OR undefined
+            if (init.data.status === false) {
+                return res.status(502).json({ message: init.data.message || 'Payment initialization failed.' });
+            }
+        }
+        if (!authorization_url || !reference) {
+            console.error('❌ Unexpected Paystack init response shape:', init);
+            return res.status(502).json({ message: 'Payment initialization failed.' });
+        }
+        // --- end normalization ---
+        // Save the donation (store original amount you showed the user)
+        yield (0, donationModel_1.createDonation)(userId, categoryId, amount, reference);
+        return res.status(201).json({
+            message: 'Payment initialized successfully.',
+            authorization_url,
+            reference,
+        });
+    }
+    catch (err) {
+        console.error('💥 Error initializing donation:', ((_g = err === null || err === void 0 ? void 0 : err.response) === null || _g === void 0 ? void 0 : _g.data) || (err === null || err === void 0 ? void 0 : err.message) || err);
+        return res.status(500).json({ message: 'Donation initialization failed.' });
+    }
 });
 exports.startDonation = startDonation;
 const handlePaystackWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* () {

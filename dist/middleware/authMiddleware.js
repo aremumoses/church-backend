@@ -15,7 +15,7 @@ const protect = (req, res, next) => {
         return res.status(401).json({ message: 'No token provided' });
     try {
         const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
-        req.user = { id: decoded.id, role: decoded.role };
+        req.user = { id: decoded.id, role: decoded.role, email: decoded.email };
         next();
     }
     catch (error) {

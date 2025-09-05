@@ -14,8 +14,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.verifyPayment = exports.initializePayment = void 0;
 const axios_1 = __importDefault(require("axios"));
-const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
+// const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
+const PAYSTACK_SECRET = "sk_test_d58c9844d1edd360dc61d44af4efd0a874baa4c9";
 const initializePayment = (email, amount) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log("Paystack Secret:", PAYSTACK_SECRET);
     const response = yield axios_1.default.post('https://api.paystack.co/transaction/initialize', {
         email,
         amount: amount * 100

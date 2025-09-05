@@ -7,6 +7,10 @@ const express_1 = __importDefault(require("express"));
 const churchInfoController_1 = require("../controllers/churchInfoController");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const router = express_1.default.Router();
+// Fetch church info (public)
 router.get('/', churchInfoController_1.fetchChurchInfo);
+// Create church info (admin/superadmin only)
+router.post('/create', authMiddleware_1.protect, churchInfoController_1.createChurchInfo);
+// Edit church info (admin/superadmin only)
 router.put('/edit', authMiddleware_1.protect, churchInfoController_1.editChurchInfo);
 exports.default = router;

@@ -10,7 +10,7 @@ const router = express_1.default.Router();
 // 📝 User submits feedback
 router.post('/', authMiddleware_1.protect, feedbackController_1.submitFeedback);
 // 🔍 Admin/SuperAdmin view all feedback
-// router.get('/', protect, authorize(['admin', 'superadmin']), getAllFeedback);
+router.get('/', authMiddleware_1.protect, feedbackController_1.getAllFeedback);
 // 🛠 Admin/SuperAdmin update feedback status
-// router.patch('/:id/status', protect, authorize(['admin', 'superadmin']), updateFeedbackStatus);
+router.patch('/:id/status', authMiddleware_1.protect, feedbackController_1.updateFeedbackStatus);
 exports.default = router;

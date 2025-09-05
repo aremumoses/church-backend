@@ -83,7 +83,7 @@ const getPostComments = (req, res) => __awaiter(void 0, void 0, void 0, function
     const postId = (req.params.postId);
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 10;
-    if ((postId) || isNaN(page) || isNaN(limit)) {
+    if ((!postId) || isNaN(page) || isNaN(limit)) {
         return res.status(400).json({ message: 'Invalid query parameters' });
     }
     try {
