@@ -33,6 +33,7 @@ const donationRoutes_1 = __importDefault(require("./routes/donationRoutes"));
 const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const dashboardRoutes_1 = __importDefault(require("./routes/dashboardRoutes"));
 const feedbackRoutes_1 = __importDefault(require("./routes/feedbackRoutes"));
+const leaderRoutes_1 = __importDefault(require("./routes/leaderRoutes"));
 const db_1 = __importDefault(require("./config/db"));
 dotenv_1.default.config();
 // Connect to MongoDB
@@ -84,6 +85,7 @@ app.use('/api/donations', donationRoutes_1.default);
 app.use('/api/users', userRoutes_1.default);
 app.use('/api/dashboard', dashboardRoutes_1.default);
 app.use('/api/feedback', feedbackRoutes_1.default);
+app.use('/api/leaders', leaderRoutes_1.default);
 // app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 const onlineUsers = new Map();
 app.get('/api/online-users', (req, res) => {

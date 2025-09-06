@@ -20,6 +20,7 @@ import donationRoutes from './routes/donationRoutes';
 import userRoutes from './routes/userRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import feedbackRoutes from './routes/feedbackRoutes';
+import leaderRoutes from './routes/leaderRoutes';
 import connectDB from './config/db';
 dotenv.config();
  
@@ -83,6 +84,7 @@ app.use('/api/donations', donationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/feedback', feedbackRoutes);
+app.use('/api/leaders', leaderRoutes);
 
 // app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 const onlineUsers = new Map<number, { name: string; role: string }>();
