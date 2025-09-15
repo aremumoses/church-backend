@@ -1,77 +1,966 @@
- 
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-  <title>Sender</title>
-  <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
-</head>
-<body>
-  <h2>Sender Chat</h2>
-
-  <div>
-    <input id="message" placeholder="Type a message" oninput="startTyping()" />
-    <button onclick="sendMessage()">Send</button>
-  </div>
-
-  <p id="status"></p>
-  <p id="received"></p>
-  <p id="online"></p>
-
-  <script>
-    const socket = io('http://localhost:5001', {
-      auth: {
-               token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4YWRiNWEzNjYyMmVkY2Q1MTk5Njc0MSIsInJvbGUiOiJzdXBlcmFkbWluIiwibmFtZSI6Ik9sYWdib3llIFZpY3RvciIsImVtYWlsIjoib2xhZ2JveWV2aWN0b3JAZ21haWwuY29tIiwiaWF0IjoxNzU2MjE1NjM1LCJleHAiOjE3NTg4MDc2MzV9.-rBdLxooDAlRimwakgiyKPPyCuUWiwi4p7kW-ILcUh0'
-
-      }
-    });
-
-    const senderId = '68adb5a36622edcd51996741';
-    const receiverId = '68adb4516622edcd5199673c';
-    let typingTimeout;
-
-    socket.on('connect', () => {
-      console.log('Sender connected!');
-    });
-
-    socket.on('receive_message', (data) => {
-      document.getElementById('received').innerText = 'Received: ' + data.message;
-    });
-socket.on('chat_notifications', (notifications) => {
-  console.log('Unread notifications:', notifications);
-});
-
-socket.emit('mark_notifications_as_read');
-
-    socket.on('user_typing', ({ senderId }) => {
-      document.getElementById('status').innerText = `User ${senderId} is typing...`;
-    });
-
-    socket.on('user_stop_typing', ({ senderId }) => {
-      document.getElementById('status').innerText = '';
-    });
-
-    socket.on('messages_read_by_receiver', ({ from }) => {
-      console.log(`Your messages were read by User ${from}`);
-    });
-
-    socket.on('online_users_list', ({ users }) => {
-      document.getElementById('online').innerText =
-        'Online Users: ' + users.map(u => `${u.name} (${u.id})`).join(', ');
-    });
-
-    function sendMessage() {
-      const message = document.getElementById('message').value;
-      socket.emit('send_message', { senderId, receiverId, message });
-      socket.emit('stop_typing', { senderId, receiverId });
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comprehensive Chat API Tester</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
     }
 
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .section {
+      background: white;
+      border: 1px solid #e1e5e9;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .full-width {
+      grid-column: 1 / -1;
+    }
+
+    .section h3 {
+      margin-top: 0;
+      color: #2c3e50;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 10px;
+    }
+
+    .messages {
+      height: 300px;
+      overflow-y: scroll;
+      border: 1px solid #ddd;
+      padding: 15px;
+      background: #fafafa;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #2ecc71, #27ae60);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #f39c12, #e67e22);
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      margin: 8px 0;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+    }
+
+    .status {
+      padding: 15px;
+      border-radius: 5px;
+      margin: 10px 0;
+      font-weight: 500;
+    }
+
+    .connected {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .disconnected {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #2c3e50;
+    }
+
+    .response-box {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 5px;
+      padding: 10px;
+      margin: 10px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .success {
+      color: #27ae60;
+      font-weight: bold;
+    }
+
+    .error {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="header">
+    <h1>Chat API Comprehensive Tester</h1>
+    <p>Test all REST API endpoints and Socket.IO real-time features</p>
+  </div>
+
+  <div class="container">
+    <!-- Authentication Section -->
+    <div class="section">
+      <h3>🔐 Authentication</h3>
+      <div class="form-group">
+        <label>Base URL:</label>
+        <input type="text" id="baseUrl" value="http://localhost:5001/api" />
+      </div>
+      <div class="form-group">
+        <label>Email:</label>
+        <input type="email" id="loginEmail" placeholder="user@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Password:</label>
+        <input type="password" id="loginPassword" placeholder="password" />
+      </div>
+      <button class="btn btn-success" onclick="login()">Login</button>
+      <div class="form-group">
+        <label>Auth Token:</label>
+        <textarea id="authToken" placeholder="JWT token will appear here after login" rows="3"></textarea>
+      </div>
+      <div id="authResponse" class="response-box" style="display:none;"></div>
+    </div>
+
+    <!-- Socket.IO Connection -->
+    <div class="section">
+      <h3>🔌 Socket.IO Connection</h3>
+      <button class="btn" onclick="connectSocket()">Connect</button>
+      <button class="btn btn-danger" onclick="disconnectSocket()">Disconnect</button>
+      <div id="socketStatus" class="status disconnected">Disconnected</div>
+      <div class="form-group">
+        <label>Socket Server URL:</label>
+        <input type="text" id="socketUrl" value="http://localhost:5001" />
+      </div>
+    </div>
+
+    <!-- Send Message -->
+    <div class="section">
+      <h3>💬 Send Message</h3>
+      <div class="form-group">
+        <label>Receiver ID:</label>
+        <input type="text" id="receiverId" placeholder="Enter receiver user ID" />
+      </div>
+      <div class="form-group">
+        <label>Message:</label>
+        <textarea id="messageText" placeholder="Enter your message" rows="3"></textarea>
+      </div>
+      <div class="grid-2">
+        <button class="btn" onclick="sendMessage()">Send via API</button>
+        <button class="btn btn-success" onclick="sendMessageSocket()">Send via Socket</button>
+      </div>
+      <div id="sendMessageResponse" class="response-box" style="display:none;"></div>
+    </div>
+
+    <!-- Get Conversations -->
+    <div class="section">
+      <h3>📋 Conversations</h3>
+      <button class="btn" onclick="getConversations()">Get Conversations List</button>
+      <div class="form-group">
+        <label>User ID for Conversation:</label>
+        <input type="text" id="conversationUserId" placeholder="Enter user ID" />
+        <button class="btn" onclick="getConversation()">Get Conversation</button>
+      </div>
+      <div id="conversationsResponse" class="response-box" style="display:none;"></div>
+    </div>
+
+    <!-- Message Management -->
+    <div class="section">
+      <h3>✏️ Message Management</h3>
+      <div class="form-group">
+        <label>Message ID:</label>
+        <input type="text" id="manageMessageId" placeholder="Enter message ID" />
+      </div>
+      <div class="form-group">
+        <label>New Message (for edit):</label>
+        <input type="text" id="editMessageText" placeholder="New message content" />
+      </div>
+      <div class="grid-2">
+        <button class="btn btn-warning" onclick="editMessage()">Edit Message</button>
+        <button class="btn btn-danger" onclick="deleteMessage()">Delete Message</button>
+      </div>
+      <div class="grid-2">
+        <button class="btn btn-success" onclick="pinMessage()">Pin Message</button>
+        <button class="btn" onclick="unpinMessage()">Unpin Message</button>
+      </div>
+      <div id="messageManageResponse" class="response-box" style="display:none;"></div>
+    </div>
+
+    <!-- Search & Analytics -->
+    <div class="section">
+      <h3>🔍 Search & Analytics</h3>
+      <div class="form-group">
+        <label>Search User ID:</label>
+        <input type="text" id="searchUserId" placeholder="User ID to search in" />
+      </div>
+      <div class="form-group">
+        <label>Search Term:</label>
+        <input type="text" id="searchTerm" placeholder="What to search for" />
+      </div>
+      <button class="btn" onclick="searchMessages()">Search Messages</button>
+      <button class="btn" onclick="getUnreadCount()">Get Unread Count</button>
+      <button class="btn" onclick="getPinnedMessages()">Get Pinned Messages</button>
+      <div id="searchResponse" class="response-box" style="display:none;"></div>
+    </div>
+
+    <!-- User Management -->
+    <div class="section">
+      <h3>👥 User Management</h3>
+      <div class="form-group">
+        <label>User ID to Block/Unblock:</label>
+        <input type="text" id="blockUserId" placeholder="Enter user ID" />
+      </div>
+      <div class="form-group">
+        <label>Block Reason:</label>
+        <input type="text" id="blockReason" placeholder="Reason for blocking" />
+      </div>
+      <div class="grid-2">
+        <button class="btn btn-danger" onclick="blockUser()">Block User</button>
+        <button class="btn btn-success" onclick="unblockUser()">Unblock User</button>
+      </div>
+      <button class="btn" onclick="getBlockedUsers()">Get Blocked Users</button>
+      <div id="userManageResponse" class="response-box" style="display:none;"></div>
+    </div>
+
+    <!-- Typing Indicators & Real-time -->
+    <div class="section">
+      <h3>⌨️ Typing & Real-time</h3>
+      <div class="form-group">
+        <label>Your ID:</label>
+        <input type="text" id="typingSenderId" placeholder="Your user ID" />
+      </div>
+      <div class="form-group">
+        <label>Target User ID:</label>
+        <input type="text" id="typingReceiverId" placeholder="Target user ID" />
+      </div>
+      <div class="grid-2">
+        <button class="btn btn-success" onclick="startTyping()">Start Typing</button>
+        <button class="btn btn-danger" onclick="stopTyping()">Stop Typing</button>
+      </div>
+      <button class="btn" onclick="markAsRead()">Mark as Read</button>
+      <button class="btn" onclick="markNotificationsRead()">Mark Notifications Read</button>
+    </div>
+
+    <!-- Report Message -->
+    <div class="section">
+      <h3>🚨 Report Message</h3>
+      <div class="form-group">
+        <label>Message ID to Report:</label>
+        <input type="text" id="reportMessageId" placeholder="Enter message ID" />
+      </div>
+      <div class="form-group">
+        <label>Report Reason:</label>
+        <select id="reportReason">
+          <option value="spam">Spam</option>
+          <option value="harassment">Harassment</option>
+          <option value="inappropriate">Inappropriate Content</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Description:</label>
+        <textarea id="reportDescription" placeholder="Describe the issue" rows="2"></textarea>
+      </div>
+      <button class="btn btn-danger" onclick="reportMessage()">Report Message</button>
+      <div id="reportResponse" class="response-box" style="display:none;"></div>
+    </div>
+
+    <!-- Logs & Messages -->
+    <div class="section full-width">
+      <h3>📝 Real-time Logs & Messages</h3>
+      <div class="grid-2">
+        <button class="btn" onclick="clearMessages()">Clear Logs</button>
+        <button class="btn" onclick="getOnlineUsers()">Get Online Users</button>
+      </div>
+      <div id="messages" class="messages"></div>
+    </div>
+
+    <!-- Online Users -->
+    <div class="section full-width">
+      <h3>👤 Online Users</h3>
+      <div id="onlineUsers" style="padding: 10px; background: #f8f9fa; border-radius: 5px;"></div>
+    </div>
+  </div>
+
+  <script>
+    let socket = null;
+    let authToken = '';
+
+    // Utility Functions
+    function getAuthHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${authToken}`
+      };
+    }
+
+    function addMessage(message, type = 'info') {
+      const messagesDiv = document.getElementById('messages');
+      const messageElement = document.createElement('div');
+      const timestamp = new Date().toLocaleTimeString();
+      messageElement.innerHTML = `<span style="color: #666;">[${timestamp}]</span> <span class="${type}">${message}</span>`;
+      messagesDiv.appendChild(messageElement);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function showResponse(elementId, data, isError = false) {
+      const element = document.getElementById(elementId);
+      element.style.display = 'block';
+      element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+      element.style.color = isError ? '#e74c3c' : '#2c3e50';
+    }
+
+    // Authentication
+    async function login() {
+
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const baseUrl = document.getElementById('baseUrl').value;
+      console.log('Logging in with', email, password, baseUrl);
+
+      if (!email || !password) {
+        alert('Please enter email and password');
+        return;
+      }
+
+      try {
+        alert('Logging in...');
+        const response = await fetch(`${baseUrl}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await response.json();
+        showResponse('authResponse', data, !response.ok);
+
+        if (response.ok && data.token) {
+          authToken = data.token;
+          document.getElementById('authToken').value = authToken;
+          addMessage('Login successful!', 'success');
+        } else {
+          addMessage('Login failed: ' + (data.message || 'Unknown error'), 'error');
+        }
+      } catch (error) {
+        addMessage('Login error: ' + error.message, 'error');
+        showResponse('authResponse', { error: error.message }, true);
+      }
+    }
+
+    // Socket.IO Functions
+    function connectSocket() {
+      const token = document.getElementById('authToken').value || authToken;
+      const socketUrl = document.getElementById('socketUrl').value;
+
+      if (!token) {
+        alert('Please login first or enter a JWT token');
+        return;
+      }
+
+      socket = io(socketUrl, {
+        auth: { token: token }
+      });
+
+      socket.on('connect', () => {
+        document.getElementById('socketStatus').textContent = 'Connected';
+        document.getElementById('socketStatus').className = 'status connected';
+        addMessage('Socket.IO: Connected to server', 'success');
+      });
+
+      socket.on('disconnect', (reason) => {
+        document.getElementById('socketStatus').textContent = 'Disconnected';
+        document.getElementById('socketStatus').className = 'status disconnected';
+        addMessage(`Socket.IO: Disconnected - ${reason}`, 'error');
+      });
+
+      socket.on('connect_error', (error) => {
+        addMessage(`Socket.IO: Connection error - ${error.message}`, 'error');
+      });
+
+      // Message events
+      socket.on('receive_message', (data) => {
+        addMessage(`📨 Received: "${data.message}" from user ${data.senderId}`, 'success');
+      });
+
+      socket.on('message_sent_confirmation', (data) => {
+        addMessage(`✅ Message sent confirmation: ${data.message}`, 'success');
+      });
+
+      socket.on('message_error', (data) => {
+        addMessage(`❌ Message error: ${data.error}`, 'error');
+      });
+
+      // Typing events
+      socket.on('user_typing', (data) => {
+        addMessage(`⌨️ User ${data.senderId} is typing...`);
+      });
+
+      socket.on('user_stop_typing', (data) => {
+        addMessage(`⌨️ User ${data.senderId} stopped typing`);
+      });
+
+      // Read status
+      socket.on('messages_read_by_receiver', (data) => {
+        addMessage(`👁️ Messages read by user ${data.from}`, 'success');
+      });
+
+      // Online users
+      socket.on('online_users_list', (data) => {
+        updateOnlineUsers(data.users);
+        addMessage(`👥 Online users updated: ${data.users.length} users online`);
+      });
+
+      // Notifications
+      socket.on('chat_notifications', (data) => {
+        addMessage(`🔔 Notifications: ${data.length} unread`);
+      });
+    }
+
+    function disconnectSocket() {
+      if (socket) {
+        socket.disconnect();
+        socket = null;
+      }
+    }
+
+    // Message Functions
+    async function sendMessage() {
+      const receiverId = document.getElementById('receiverId').value;
+      const message = document.getElementById('messageText').value;
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      if (!receiverId || !message) {
+        alert('Please fill receiver ID and message');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/send`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ receiverId, message })
+        });
+
+        const data = await response.json();
+        showResponse('sendMessageResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`📤 Message sent via API: "${message}"`, 'success');
+          document.getElementById('messageText').value = '';
+        } else {
+          addMessage(`❌ Send message failed: ${data.message}`, 'error');
+        }
+      } catch (error) {
+        addMessage(`❌ Send message error: ${error.message}`, 'error');
+      }
+    }
+
+    function sendMessageSocket() {
+      if (!socket) {
+        alert('Please connect socket first');
+        return;
+      }
+
+      const senderId = document.getElementById('typingSenderId').value;
+      const receiverId = document.getElementById('receiverId').value;
+      const message = document.getElementById('messageText').value;
+
+      if (!senderId || !receiverId || !message) {
+        alert('Please fill sender ID, receiver ID and message');
+        return;
+      }
+
+      socket.emit('send_message', { senderId, receiverId, message });
+      addMessage(`📤 Message sent via Socket: "${message}"`, 'success');
+      document.getElementById('messageText').value = '';
+    }
+
+    // Conversation Functions
+    async function getConversations() {
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/conversations`, {
+          headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+        showResponse('conversationsResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`📋 Retrieved ${Array.isArray(data) ? data.length : 0} conversations`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Get conversations error: ${error.message}`, 'error');
+      }
+    }
+
+    async function getConversation() {
+      const userId = document.getElementById('conversationUserId').value;
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      if (!userId) {
+        alert('Please enter user ID');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/conversation/${userId}`, {
+          headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+        showResponse('conversationsResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`💬 Retrieved conversation with user ${userId}: ${Array.isArray(data) ? data.length : 0} messages`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Get conversation error: ${error.message}`, 'error');
+      }
+    }
+
+    // Message Management Functions
+    async function editMessage() {
+      const messageId = document.getElementById('manageMessageId').value;
+      const newMessage = document.getElementById('editMessageText').value;
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      if (!messageId || !newMessage) {
+        alert('Please enter message ID and new message');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/message/${messageId}`, {
+          method: 'PUT',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ message: newMessage })
+        });
+
+        const data = await response.json();
+        showResponse('messageManageResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`✏️ Message edited successfully`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Edit message error: ${error.message}`, 'error');
+      }
+    }
+
+    async function deleteMessage() {
+      const messageId = document.getElementById('manageMessageId').value;
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      if (!messageId) {
+        alert('Please enter message ID');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/message/${messageId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+        showResponse('messageManageResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`🗑️ Message deleted successfully`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Delete message error: ${error.message}`, 'error');
+      }
+    }
+
+    async function pinMessage() {
+      const messageId = document.getElementById('manageMessageId').value;
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      if (!messageId) {
+        alert('Please enter message ID');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/message/${messageId}/pin`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+        showResponse('messageManageResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`📌 Message pinned successfully`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Pin message error: ${error.message}`, 'error');
+      }
+    }
+
+    async function unpinMessage() {
+      const messageId = document.getElementById('manageMessageId').value;
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      if (!messageId) {
+        alert('Please enter message ID');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/message/${messageId}/pin`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+        showResponse('messageManageResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`📌 Message unpinned successfully`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Unpin message error: ${error.message}`, 'error');
+      }
+    }
+
+    // Search Functions
+    async function searchMessages() {
+      const userId = document.getElementById('searchUserId').value;
+      const searchTerm = document.getElementById('searchTerm').value;
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      if (!userId || !searchTerm) {
+        alert('Please enter user ID and search term');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/conversation/${userId}/search?q=${encodeURIComponent(searchTerm)}`, {
+          headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+        showResponse('searchResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`🔍 Search completed: ${Array.isArray(data) ? data.length : 0} results found`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Search error: ${error.message}`, 'error');
+      }
+    }
+
+    async function getUnreadCount() {
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/unread-count`, {
+          headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+        showResponse('searchResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`📊 Unread count: ${data.unreadCount || 0}`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Get unread count error: ${error.message}`, 'error');
+      }
+    }
+
+    async function getPinnedMessages() {
+      const userId = document.getElementById('searchUserId').value;
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      if (!userId) {
+        alert('Please enter user ID');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/conversation/${userId}/pinned`, {
+          headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+        showResponse('searchResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`📌 Retrieved ${Array.isArray(data) ? data.length : 0} pinned messages`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Get pinned messages error: ${error.message}`, 'error');
+      }
+    }
+
+    // User Management Functions
+    async function blockUser() {
+      const userId = document.getElementById('blockUserId').value;
+      const reason = document.getElementById('blockReason').value;
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      if (!userId) {
+        alert('Please enter user ID to block');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/block/${userId}`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ reason })
+        });
+
+        const data = await response.json();
+        showResponse('userManageResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`🚫 User ${userId} blocked successfully`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Block user error: ${error.message}`, 'error');
+      }
+    }
+
+    async function unblockUser() {
+      const userId = document.getElementById('blockUserId').value;
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      if (!userId) {
+        alert('Please enter user ID to unblock');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/block/${userId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+        showResponse('userManageResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`✅ User ${userId} unblocked successfully`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Unblock user error: ${error.message}`, 'error');
+      }
+    }
+
+    async function getBlockedUsers() {
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/blocked-users`, {
+          headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+        showResponse('userManageResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`🚫 Retrieved ${Array.isArray(data) ? data.length : 0} blocked users`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Get blocked users error: ${error.message}`, 'error');
+      }
+    }
+
+    // Typing Functions
     function startTyping() {
+      if (!socket) {
+        alert('Please connect socket first');
+        return;
+      }
+
+      const senderId = document.getElementById('typingSenderId').value;
+      const receiverId = document.getElementById('typingReceiverId').value;
+
+      if (!senderId || !receiverId) {
+        alert('Please fill sender and receiver IDs');
+        return;
+      }
+
       socket.emit('typing', { senderId, receiverId });
-      clearTimeout(typingTimeout);
-      typingTimeout = setTimeout(() => {
-        socket.emit('stop_typing', { senderId, receiverId });
-      }, 1000);
+      addMessage(`⌨️ Started typing to user ${receiverId}`, 'success');
+    }
+
+    function stopTyping() {
+      if (!socket) {
+        alert('Please connect socket first');
+        return;
+      }
+
+      const senderId = document.getElementById('typingSenderId').value;
+      const receiverId = document.getElementById('typingReceiverId').value;
+
+      if (!senderId || !receiverId) {
+        alert('Please fill sender and receiver IDs');
+        return;
+      }
+
+      socket.emit('stop_typing', { senderId, receiverId });
+      addMessage(`⌨️ Stopped typing to user ${receiverId}`, 'success');
+    }
+
+    async function markAsRead() {
+      const userId = document.getElementById('typingReceiverId').value;
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      if (!userId) {
+        alert('Please enter the user ID whose messages you want to mark as read');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/mark-as-read`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ userId })
+        });
+
+        const data = await response.json();
+        showResponse('messagesResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`✅ Marked messages as read for user ${userId}`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Mark as read error: ${error.message}`, 'error');
+      }
+    }
+
+    async function markNotificationsRead() {
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/mark-notifications-read`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+
+        const data = await response.json();
+        showResponse('messagesResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`✅ Marked all notifications as read`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Mark notifications read error: ${error.message}`, 'error');
+      }
+    }
+
+    // Report Message
+    async function reportMessage() {
+      const messageId = document.getElementById('reportMessageId').value;
+      const reason = document.getElementById('reportReason').value;
+      const description = document.getElementById('reportDescription').value;
+      const baseUrl = document.getElementById('baseUrl').value;
+
+      if (!messageId || !reason) {
+        alert('Please enter message ID and select a reason');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${baseUrl}/chat/report`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ messageId, reason, description })
+        });
+
+        const data = await response.json();
+        showResponse('reportResponse', data, !response.ok);
+
+        if (response.ok) {
+          addMessage(`🚨 Reported message ${messageId} successfully`, 'success');
+        }
+      } catch (error) {
+        addMessage(`❌ Report message error: ${error.message}`, 'error');
+      }
     }
   </script>
 </body>
