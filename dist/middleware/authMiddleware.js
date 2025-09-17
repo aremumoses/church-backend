@@ -1,7 +1,4 @@
 "use strict";
-// // src/middleware/authMiddleware.ts
-// import { Request, Response, NextFunction } from 'express';
-// import jwt from 'jsonwebtoken';
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };

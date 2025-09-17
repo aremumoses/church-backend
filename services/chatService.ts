@@ -1,5 +1,5 @@
 import mongoose, { PipelineStage } from 'mongoose';
-import Message from '../models/chatModel';
+import { Message } from '../models/chatModel';
 
 // Send a new message
 export const sendMessage = async (

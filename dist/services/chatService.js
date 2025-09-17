@@ -14,16 +14,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.markMessagesAsRead = exports.getChatHistory = exports.getConversationList = exports.getConversationWithUser = exports.sendMessage = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
-const chatModel_1 = __importDefault(require("../models/chatModel"));
+const chatModel_1 = require("../models/chatModel");
 // Send a new message
 const sendMessage = (senderId, receiverId, message) => __awaiter(void 0, void 0, void 0, function* () {
-    const msg = new chatModel_1.default({ senderId, receiverId, message });
+    const msg = new chatModel_1.Message({ senderId, receiverId, message });
     yield msg.save();
 });
 exports.sendMessage = sendMessage;
 // Get full chat between two users (by time ascending)
 const getConversationWithUser = (userId, otherUserId) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield chatModel_1.default.find({
+    return yield chatModel_1.Message.find({
         $or: [
             { senderId: userId, receiverId: otherUserId },
             { senderId: otherUserId, receiverId: userId },
@@ -83,14 +83,14 @@ const getConversationList = (userId) => __awaiter(void 0, void 0, void 0, functi
             $sort: { created_at: -1 },
         },
     ];
-    return yield chatModel_1.default.aggregate(pipeline);
+    return yield chatModel_1.Message.aggregate(pipeline);
 });
 exports.getConversationList = getConversationList;
 // Get all messages with a specific user (alias for clarity)
 exports.getChatHistory = exports.getConversationWithUser;
 // Mark messages from sender to receiver as "read"
 const markMessagesAsRead = (senderId, receiverId) => __awaiter(void 0, void 0, void 0, function* () {
-    yield chatModel_1.default.updateMany({
+    yield chatModel_1.Message.updateMany({
         senderId: new mongoose_1.default.Types.ObjectId(senderId),
         receiverId: new mongoose_1.default.Types.ObjectId(receiverId),
         status: { $ne: 'read' },
