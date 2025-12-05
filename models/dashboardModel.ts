@@ -6,27 +6,41 @@ import mongoose from 'mongoose';
 
 // 📊 Get user stats
 export const getUserStats = async () => {
-  const totalUsers = await User.countDocuments();
-  const activeUsers = await User.countDocuments({ status: 'active' });
-  const inactiveUsers = await User.countDocuments({ status: 'inactive' });
-  
-  // Get new users this month
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
-  
-  const newUsersThisMonth = await User.countDocuments({
-    created_at: { $gte: startOfMonth }
-  });
+  try {
+    console.log('🔍 Starting getUserStats query...');
+    const totalUsers = await User.countDocuments();
+    console.log('✅ Total users count:', totalUsers);
+    
+    const activeUsers = await User.countDocuments({ status: 'active' });
+    console.log('✅ Active users count:', activeUsers);
+    
+    const inactiveUsers = await User.countDocuments({ status: 'inactive' });
+    console.log('✅ Inactive users count:', inactiveUsers);
+    
+    // Get new users this month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    console.log('📅 Checking for new users since:', startOfMonth);
+    
+    const newUsersThisMonth = await User.countDocuments({
+      created_at: { $gte: startOfMonth }
+    });
+    console.log('✅ New users this month:', newUsersThisMonth);
 
-  console.log('📊 User Stats:', { totalUsers, activeUsers, inactiveUsers, newUsersThisMonth });
+    const result = {
+      totalUsers,
+      activeUsers,
+      inactiveUsers,
+      newUsersThisMonth,
+    };
+    console.log('📊 User Stats Result:', result);
 
-  return {
-    totalUsers,
-    activeUsers,
-    inactiveUsers,
-    newUsersThisMonth,
-  };
+    return result;
+  } catch (error) {
+    console.error('❌ Error in getUserStats:', error);
+    throw error;
+  }
 };
 
 // 📊 Get post stats
@@ -104,4 +118,33 @@ export const getMediaCount = async () => {
     images,
     pdfs,
   };
+};
+
+// 📊 Get event stats
+export const getEventStats = async () => {
+  try {
+    const Event = mongoose.model('Event');
+    console.log('🔍 Getting event stats...');
+    
+    const totalEvents = await Event.countDocuments();
+    console.log('✅ Total events:', totalEvents);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const upcomingEvents = await Event.countDocuments({ date: { $gte: today } });
+    console.log('✅ Upcoming events:', upcomingEvents);
+    
+    const result = {
+      totalEvents,
+      upcomingEvents,
+    };
+    console.log('📊 Event Stats Result:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Error in getEventStats:', error);
+    return {
+      totalEvents: 0,
+      upcomingEvents: 0,
+    };
+  }
 };

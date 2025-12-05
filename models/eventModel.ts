@@ -37,11 +37,36 @@ export const createEvent = async (
 };
 
 export const getUpcomingEvents = async () => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Set to beginning of today
-  return await Event.find({ date: { $gte: today } })
-    .populate('createdBy', 'name email')
-    .sort({ date: 1 });
+  try {
+    console.log('🔍 Fetching upcoming events...');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to beginning of today
+    console.log('📅 Today date:', today);
+    
+    const events = await Event.find({ date: { $gte: today } })
+      .populate('createdBy', 'name email')
+      .sort({ date: 1 });
+    
+    console.log(`✅ Found ${events.length} upcoming events`);
+    return events;
+  } catch (error) {
+    console.error('❌ Error fetching upcoming events:', error);
+    throw error;
+  }
+};
+
+export const getAllEvents = async () => {
+  try {
+    console.log('🔍 Fetching all events...');
+    const events = await Event.find()
+      .populate('createdBy', 'name email')
+      .sort({ date: -1 });
+    console.log(`✅ Found ${events.length} total events`);
+    return events;
+  } catch (error) {
+    console.error('❌ Error fetching all events:', error);
+    throw error;
+  }
 };
 
 export const updateEvent = async (

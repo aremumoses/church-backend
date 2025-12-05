@@ -3,6 +3,7 @@ import {
   getUserStats,
   getPostStats,
   getMediaCount,
+  getEventStats,
 } from '../models/dashboardModel';
 import { getDonationStats } from '../models/donationModel';
 
@@ -10,11 +11,12 @@ export const getDashboardOverview = async (req: Request, res: Response) => {
   try {
     console.log('📊 Fetching dashboard overview...');
     
-    const [userStats, postStats, donationStats, mediaCount] = await Promise.all([
+    const [userStats, postStats, donationStats, mediaCount, eventStats] = await Promise.all([
       getUserStats(),
       getPostStats(),
       getDonationStats(),
       getMediaCount(),
+      getEventStats(),
     ]);
 
     const dashboardData = {
@@ -26,6 +28,7 @@ export const getDashboardOverview = async (req: Request, res: Response) => {
         thisMonthAmount: 0, // Add logic if needed
       },
       mediaCount,
+      eventStats,
     };
 
     console.log('✅ Dashboard data prepared:', JSON.stringify(dashboardData, null, 2));
