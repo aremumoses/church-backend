@@ -81,24 +81,87 @@ export const getConversationWithUser = async (
 };
 
 export const getConversationList = async (userId: string | Types.ObjectId) => {
-  // Your existing implementation - keep as is
-  const messages = await Message.aggregate([
+  const userObjectId = new mongoose.Types.ObjectId(userId);
+  
+  const conversations = await Message.aggregate([
     {
       $match: {
         $and: [
           { isDeleted: false },
           {
             $or: [
-              { senderId: new mongoose.Types.ObjectId(userId) }, 
-              { receiverId: new mongoose.Types.ObjectId(userId) }
+              { senderId: userObjectId }, 
+              { receiverId: userObjectId }
             ]
           }
         ]
       }
     },
-    // ... rest of your existing aggregation
+    {
+      $sort: { created_at: -1 }
+    },
+    {
+      $group: {
+        _id: {
+          $cond: [
+            { $eq: ['$senderId', userObjectId] },
+            '$receiverId',
+            '$senderId'
+          ]
+        },
+        lastMessage: { $first: '$$ROOT' },
+        unreadCount: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $eq: ['$receiverId', userObjectId] },
+                  { $ne: ['$status', 'read'] }
+                ]
+              },
+              1,
+              0
+            ]
+          }
+        }
+      }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'otherUser'
+      }
+    },
+    {
+      $unwind: '$otherUser'
+    },
+    {
+      $project: {
+        _id: 1,
+        otherUser: {
+          _id: '$otherUser._id',
+          id: '$otherUser._id',
+          name: '$otherUser.name',
+          email: '$otherUser.email',
+          profile_pic: '$otherUser.profile_pic',
+          role: '$otherUser.role'
+        },
+        lastMessage: {
+          message: '$lastMessage.message',
+          created_at: '$lastMessage.created_at',
+          senderId: '$lastMessage.senderId'
+        },
+        unreadCount: 1
+      }
+    },
+    {
+      $sort: { 'lastMessage.created_at': -1 }
+    }
   ]);
-  return messages;
+  
+  return conversations;
 };
 
 export const markMessagesAsRead = async (

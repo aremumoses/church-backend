@@ -1,5 +1,5 @@
 import express from 'express';
-import { getMyProfile, updateMyProfile } from '../controllers/profileController';
+import { getMyProfile, updateMyProfile, changePassword, getProfileStats } from '../controllers/profileController';
 import { protect } from '../middleware/authMiddleware';
 import { getUserPublicProfile } from '../controllers/profileController';
 import { adminOnly } from '../middleware/roleMiddleware';
@@ -14,6 +14,8 @@ const router = express.Router();
 
 router.get('/me', protect, getMyProfile);
 router.patch('/update', protect, updateMyProfile);
+router.patch('/change-password', protect, changePassword);
+router.get('/stats', protect, getProfileStats);
 router.get('/:id', protect, getUserPublicProfile);
 router.patch('/admin-update/:id', protect, adminOnly, adminUpdateUserProfile);
 router.patch('/role/:id', protect, superAdminOnly, updateUserRoleController);

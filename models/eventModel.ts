@@ -9,6 +9,7 @@ const eventSchema = new mongoose.Schema(
     description: String,
     date: { type: Date, required: true },
     location: String,
+    image: String,
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   {
@@ -17,6 +18,7 @@ const eventSchema = new mongoose.Schema(
 );
 
 const Event = mongoose.model('Event', eventSchema);
+export default Event;
 
 // -----------------------------
 // 2. Event Functions
@@ -27,15 +29,19 @@ export const createEvent = async (
   description: string,
   date: string,
   location: string,
-  createdBy: string
+  createdBy: string,
+  image?: string
 ) => {
-  const event = new Event({ title, description, date, location, createdBy });
+  const event = new Event({ title, description, date, location, image, createdBy });
   await event.save();
 };
 
 export const getUpcomingEvents = async () => {
   const today = new Date();
-  return await Event.find({ date: { $gte: today } }).sort({ date: 1 });
+  today.setHours(0, 0, 0, 0); // Set to beginning of today
+  return await Event.find({ date: { $gte: today } })
+    .populate('createdBy', 'name email')
+    .sort({ date: 1 });
 };
 
 export const updateEvent = async (
@@ -43,13 +49,14 @@ export const updateEvent = async (
   title: string,
   description: string,
   date: string,
-  location: string
+  location: string,
+  image?: string
 ) => {
-  return await Event.findByIdAndUpdate(
-    id,
-    { title, description, date, location },
-    { new: true }
-  );
+  const updateData: any = { title, description, date, location };
+  if (image !== undefined) {
+    updateData.image = image;
+  }
+  return await Event.findByIdAndUpdate(id, updateData, { new: true });
 };
 
 export const deleteEvent = async (id: string) => {

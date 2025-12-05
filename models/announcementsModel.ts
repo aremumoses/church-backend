@@ -4,6 +4,7 @@ const announcementSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     content: { type: String, required: true },
+    image: String,
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     status: { type: String, default: 'active' },
   },

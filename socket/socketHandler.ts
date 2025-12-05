@@ -3,8 +3,8 @@ import { Server, Socket } from 'socket.io';
 import { sendMessage, markMessagesAsRead } from '../models/chatModel';
 import { createNotification, getUnreadNotifications, markNotificationsAsRead } from '../models/notificationModel';
 
-// Store online users
-const onlineUsers = new Map<number, { name: string; role: string }>();
+// Store online users (use string IDs for consistency)
+const onlineUsers = new Map<string, { _id: string; name: string; role: string }>();
 
 export const initializeSocketHandlers = (io: Server) => {
   io.on('connection', (socket: Socket) => {
@@ -16,7 +16,8 @@ export const initializeSocketHandlers = (io: Server) => {
 
     // Join user-specific room
     socket.join(`user_${userId}`);
-    onlineUsers.set(userId, { name, role });
+    // Store with both _id and id for frontend compatibility
+    onlineUsers.set(userId.toString(), { _id: userId.toString(), name, role });
 
     // Emit online users list to all clients
     emitOnlineUsersList(io);
@@ -37,7 +38,8 @@ export const initializeSocketHandlers = (io: Server) => {
 const emitOnlineUsersList = (io: Server) => {
   io.emit('online_users_list', {
     users: Array.from(onlineUsers.entries()).map(([id, data]) => ({
-      id,
+      _id: id,
+      id: id,
       name: data.name,
       role: data.role,
     })),
@@ -64,15 +66,21 @@ const registerMessageHandlers = (socket: Socket, io: Server) => {
 
       const isReceiverOnline = onlineUsers.has(receiverId);
 
+      // ONLY send to receiver, NOT back to sender to prevent duplication
       if (isReceiverOnline) {
         io.to(`user_${receiverId}`).emit('receive_message', {
           senderId,
+          receiverId,
           message,
           createdAt: new Date().toISOString(),
         });
       } else {
         await createNotification(senderId, receiverId, message);
       }
+
+      // Notify both users to update their conversation lists
+      io.to(`user_${senderId}`).emit('conversation_updated', { userId: receiverId });
+      io.to(`user_${receiverId}`).emit('conversation_updated', { userId: senderId });
 
       // Confirm message sent to sender
       socket.emit('message_sent_confirmation', { 
@@ -126,7 +134,7 @@ const registerNotificationHandlers = (socket: Socket, userId: number) => {
 // Disconnect handler
 const registerDisconnectHandler = (socket: Socket, io: Server, userId: number) => {
   socket.on('disconnect', () => {
-    onlineUsers.delete(userId);
+    onlineUsers.delete(userId.toString());
     emitOnlineUsersList(io);
     console.log(`❌ User ${userId} disconnected`);
   });
@@ -135,7 +143,8 @@ const registerDisconnectHandler = (socket: Socket, io: Server, userId: number) =
 // Export online users getter for REST endpoint
 export const getOnlineUsers = () => {
   return Array.from(onlineUsers.entries()).map(([id, data]) => ({
-    id,
+    _id: id,
+    id: id,
     name: data.name,
     role: data.role
   }));

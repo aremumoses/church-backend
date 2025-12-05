@@ -4,11 +4,14 @@ import {
   getApprovedPosts,
   likeForumPost,
   approveForumPost,
+  updateForumPost,
   deleteForumPost,
   createComment,
   getPostComments,
   editComment,
-  removeComment
+  removeComment,
+  addPostView,
+  likeForumComment
 } from '../controllers/forumController';
  
 import { protect } from '../middleware/authMiddleware';
@@ -20,13 +23,16 @@ const router = express.Router();
 router.post('/posts', protect, createForumPost);
 router.get('/posts', getApprovedPosts);
 router.patch('/posts/approve/:id', protect, adminOnly, approveForumPost);
-router.delete('/posts/:id', protect, adminOnly, deleteForumPost);
+router.put('/posts/:id', protect, updateForumPost);
+router.delete('/posts/:id', protect, deleteForumPost);
 router.patch('/posts/like/:id', protect, likeForumPost);
-router.get('/posts/pending', protect, getPendingPosts);  
+router.get('/posts/pending', protect, getPendingPosts);
+router.post('/posts/:postId/views', addPostView);
 
 router.post('/posts/:postId/comments', protect, createComment);
 router.get('/posts/:postId/comments', getPostComments);
 router.patch('/comments/:commentId', protect, editComment);
 router.delete('/comments/:commentId', protect, removeComment);
+router.patch('/comments/like/:commentId', protect, likeForumComment);
 
 export default router;

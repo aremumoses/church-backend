@@ -9,37 +9,47 @@ import {
   hasUserLikedPost,
   approvePost,
   deletePost,
+  updatePost,
+  incrementPostViews,
    
   addComment,
   getCommentsByPost,
   updateComment,
   deleteComment,
+  deleteCommentByAdmin,
+  getCommentById,
   getPaginatedComments,
-  getPaginatedPosts
+  getPaginatedPosts,
+  likeComment,
+  unlikeComment,
+  hasUserLikedComment
 } from '../models/forumModel';
 
 export const createForumPost = async (req: AuthRequest, res: Response) => {
-  const { title, content, category } = req.body;
+  const { title, content, category, image } = req.body;
   const userId =  (req.user!.id);  
   const role = req.user!.role;
 
   const status = role === 'admin' || role === 'superadmin' ? 'active' : 'pending';
 
-  const post = await createPost({ title, content, category, userId, status });
+  const post = await createPost({ title, content, category, image, userId, status });
   res.status(201).json(post);
 };
 
 export const getApprovedPosts = async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string, 10) || 1;
   const limit = parseInt(req.query.limit as string, 10) || 10;
+  
+  // Extract userId from request if authenticated (optional)
+  const userId = (req as any).user?.id;
 
   if (isNaN(page) || isNaN(limit)) {
     return res.status(400).json({ message: 'Page and limit must be numbers' });
   }
 
   try {
-    console.log('Getting posts with:', { page, limit });
-    const data = await getPaginatedPosts(page, limit);
+    console.log('Getting posts with:', { page, limit, userId });
+    const data = await getPaginatedPosts(page, limit, userId);
     res.json(data);
   } catch (err) {
     console.error('Pagination error:', err);
@@ -53,8 +63,46 @@ export const approveForumPost = async (req: AuthRequest, res: Response) => {
   res.json({ message: 'Post approved' });
 };
 
+export const updateForumPost = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, content, category, image } = req.body;
+    const userId = req.user!.id;
+    const role = req.user!.role;
+
+    const post = await getPostById(id);
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    // Allow admin/superadmin or post owner to edit
+    if (role !== 'admin' && role !== 'superadmin' && post.userId.toString() !== userId) {
+      return res.status(403).json({ message: 'You do not have permission to edit this post' });
+    }
+
+    const updatedPost = await updatePost(id, { title, content, category, image });
+    res.json({ message: 'Post updated successfully', post: updatedPost });
+  } catch (error: any) {
+    console.error('Error updating post:', error);
+    res.status(500).json({ message: error.message || 'Failed to update post' });
+  }
+};
+
 export const deleteForumPost = async (req: AuthRequest, res: Response) => {
   const { id } = req.params;
+  const userId = req.user!.id;
+  const role = req.user!.role;
+
+  const post = await getPostById(id);
+  if (!post) {
+    return res.status(404).json({ message: 'Post not found' });
+  }
+
+  // Allow admin/superadmin or post owner to delete
+  if (role !== 'admin' && role !== 'superadmin' && post.userId.toString() !== userId) {
+    return res.status(403).json({ message: 'You do not have permission to delete this post' });
+  }
+
   await deletePost(id);
   res.json({ message: 'Post deleted' });
 };
@@ -101,13 +149,14 @@ export const getPostComments = async (req: Request, res: Response) => {
   const postId =  (req.params.postId);
   const page = parseInt(req.query.page as string, 10) || 1;
   const limit = parseInt(req.query.limit as string, 10) || 10;
+  const userId = (req as any).user?.id;
 
   if ( (!postId) || isNaN(page) || isNaN(limit)) {
     return res.status(400).json({ message: 'Invalid query parameters' });
   }
 
   try {
-    const data = await getPaginatedComments(postId, page, limit);
+    const data = await getPaginatedComments(postId, page, limit, userId);
     res.json(data);
   } catch (err) {
     console.error('Pagination error (comments):', err);
@@ -118,20 +167,71 @@ export const getPostComments = async (req: Request, res: Response) => {
 
 
 export const editComment = async (req: AuthRequest, res: Response) => {
-  const commentId =  (req.params.commentId);
+  const commentId = req.params.commentId;
   const { content } = req.body;
-//    const postId =  (req.params.id);
-  const userId =  (req.user!.id);  
+  const userId = req.user!.id;
+
+  const comment = await getCommentById(commentId);
+  if (!comment) {
+    return res.status(404).json({ message: 'Comment not found' });
+  }
+
+  // Only allow the comment owner to edit
+  if (comment.userId._id.toString() !== userId) {
+    return res.status(403).json({ message: 'You can only edit your own comments' });
+  }
 
   await updateComment(commentId, userId, content);
   res.json({ message: 'Comment updated' });
 };
 
 export const removeComment = async (req: AuthRequest, res: Response) => {
-  const commentId =  (req.params.commentId);
-  const userId =  (req.user!.id);  
+  const commentId = req.params.commentId;
+  const userId = req.user!.id;
+  const role = req.user!.role;
 
+  const comment = await getCommentById(commentId);
+  if (!comment) {
+    return res.status(404).json({ message: 'Comment not found' });
+  }
 
-  await deleteComment(commentId, userId);
+  // Allow admin/superadmin to delete any comment, or user to delete their own
+  if (role === 'admin' || role === 'superadmin') {
+    await deleteCommentByAdmin(commentId);
+  } else if (comment.userId._id.toString() === userId) {
+    await deleteComment(commentId, userId);
+  } else {
+    return res.status(403).json({ message: 'You do not have permission to delete this comment' });
+  }
+
   res.json({ message: 'Comment deleted' });
+};
+
+export const addPostView = async (req: Request, res: Response) => {
+  const postId = req.params.postId;
+  
+  try {
+    await incrementPostViews(postId);
+    res.json({ message: 'View added' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to add view' });
+  }
+};
+
+export const likeForumComment = async (req: AuthRequest, res: Response) => {
+  const commentId = req.params.commentId;
+  const userId = req.user!.id;
+
+  try {
+    const liked = await hasUserLikedComment(commentId, userId);
+    if (liked) {
+      await unlikeComment(commentId, userId);
+      return res.json({ message: 'Comment unliked' });
+    }
+
+    await likeComment(commentId, userId);
+    return res.json({ message: 'Comment liked' });
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to like comment' });
+  }
 };

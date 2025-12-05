@@ -43,7 +43,8 @@ export const fetchConversation = async (req: AuthRequest, res: Response) => {
 
   try {
     const messages = await getConversationWithUser(senderId, receiverId);
-    res.json(messages);
+    // Return empty array if no messages yet - this allows users to start new conversations
+    res.json(messages || []);
   } catch (err) {
     console.error('Fetch chat error:', err);
     res.status(500).json({ message: 'Failed to fetch conversation' });
@@ -118,10 +119,12 @@ export const deleteChatMessage = async (req: AuthRequest, res: Response) => {
 };
 
 export const markMessageAsRead = async (req: AuthRequest, res: Response) => {
-  const { senderId, receiverId } = req.body;
+  const { userId } = req.body;
+  const currentUserId = req.user!.id;
 
   try {
-    await markMessagesAsRead(senderId, receiverId);
+    // Mark all messages from userId to currentUserId as read
+    await markMessagesAsRead(userId, currentUserId);
     res.json({ message: 'Messages marked as read' });
   } catch (error) {
     console.error('Mark as read error:', error);
@@ -263,5 +266,27 @@ export const fetchPinnedMessages = async (req: AuthRequest, res: Response) => {
   } catch (error) {
     console.error('Get pinned messages error:', error);
     res.status(500).json({ message: 'Failed to get pinned messages' });
+  }
+};
+
+// Get or create conversation - useful for starting new chats
+export const getOrCreateConversation = async (req: AuthRequest, res: Response) => {
+  const senderId = req.user!.id;
+  const { userId: receiverId } = req.params;
+
+  try {
+    const messages = await getConversationWithUser(senderId, receiverId);
+    
+    // Return conversation info
+    res.json({
+      conversationId: `${senderId}_${receiverId}`,
+      messages: messages || [],
+      participantIds: [senderId, receiverId],
+      messageCount: messages?.length || 0,
+      hasMessages: messages && messages.length > 0
+    });
+  } catch (error) {
+    console.error('Get or create conversation error:', error);
+    res.status(500).json({ message: 'Failed to get conversation' });
   }
 };

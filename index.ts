@@ -3,6 +3,8 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import http from 'http';
+import path from 'path';
+import fs from 'fs';
 import { Server } from 'socket.io';
 import { protectSocket } from './middleware/socketAuthMiddleware';
 import { initializeSocketHandlers, getOnlineUsers } from './socket/socketHandler';
@@ -23,6 +25,7 @@ import userRoutes from './routes/userRoutes';
 import dashboardRoutes from './routes/dashboardRoutes';
 import feedbackRoutes from './routes/feedbackRoutes';
 import leaderRoutes from './routes/leaderRoutes';
+import uploadRoutes from './routes/uploadRoutes';
 
 dotenv.config();
 
@@ -44,6 +47,15 @@ app.use(cors());
 app.use('/api/donations/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(uploadsDir));
 
 // Health check routes
 app.get('/', (req: Request, res: Response) => {
@@ -79,9 +91,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/leaders', leaderRoutes);
-
-// Static file serving (uncomment if needed)
-// app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use('/api/upload', uploadRoutes);
 
 // Error handling
 process.on('uncaughtException', (err) => {

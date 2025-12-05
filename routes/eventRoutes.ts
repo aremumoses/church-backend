@@ -1,9 +1,10 @@
 import express from 'express';
-import { fetchEvents, postEvent, putEvent, removeEvent } from '../controllers/eventController';
+import { fetchEvents, fetchUpcomingEvents, postEvent, putEvent, removeEvent } from '../controllers/eventController';
 import { protect } from '../middleware/authMiddleware';
 
 const router = express.Router();
 
+router.get('/upcoming', fetchUpcomingEvents);
 router.get('/', fetchEvents);
 router.post('/', protect, postEvent);
 router.put('/:id', protect, putEvent);

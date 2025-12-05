@@ -8,6 +8,8 @@ import { getDonationStats } from '../models/donationModel';
 
 export const getDashboardOverview = async (req: Request, res: Response) => {
   try {
+    console.log('📊 Fetching dashboard overview...');
+    
     const [userStats, postStats, donationStats, mediaCount] = await Promise.all([
       getUserStats(),
       getPostStats(),
@@ -15,13 +17,20 @@ export const getDashboardOverview = async (req: Request, res: Response) => {
       getMediaCount(),
     ]);
 
-    res.json({
+    const dashboardData = {
       userStats,
       postStats,
-      donationStats,
+      donationStats: {
+        totalDonations: donationStats.successfulCount || 0,
+        totalAmount: donationStats.totalAmount || 0,
+        thisMonthAmount: 0, // Add logic if needed
+      },
       mediaCount,
-      // onlineUsers: onlineUserList, // Uncomment when needed
-    });
+    };
+
+    console.log('✅ Dashboard data prepared:', JSON.stringify(dashboardData, null, 2));
+
+    res.json(dashboardData);
   } catch (error) {
     console.error('❌ Dashboard Error:', error);
     res.status(500).json({ message: 'Error fetching dashboard metrics' });

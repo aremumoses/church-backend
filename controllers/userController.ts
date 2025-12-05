@@ -1,6 +1,6 @@
 // src/controllers/userController.ts
 import { Request, Response } from 'express';
-import { getUsersByRole } from '../models/userModel';
+import User, { getUsersByRole } from '../models/userModel';
 import { AuthRequest } from '../middleware/authMiddleware';
 
 export const listUsersByRole = async (req: AuthRequest, res: Response) => {
@@ -22,5 +22,32 @@ export const listUsersByRole = async (req: AuthRequest, res: Response) => {
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch users by role' });
+  }
+};
+
+export const getAllUsers = async (req: AuthRequest, res: Response) => {
+  try {
+    console.log('📋 Fetching all users...');
+    const currentUserId = req.user!.id;
+    
+    // Fetch all users (including inactive) but exclude current user
+    const users = await User.find(
+      { _id: { $ne: currentUserId } },
+      'id name email phone profile_pic role status created_at updated_at'
+    ).sort({ name: 1 });
+    
+    console.log(`✅ Found ${users.length} users (excluding current user)`);
+    console.log('👥 User roles breakdown:', {
+      superadmins: users.filter(u => u.role === 'superadmin').length,
+      admins: users.filter(u => u.role === 'admin').length,
+      users: users.filter(u => u.role === 'user').length,
+      active: users.filter(u => u.status === 'active').length,
+      inactive: users.filter(u => u.status === 'inactive').length,
+    });
+    
+    res.json(users);
+  } catch (err) {
+    console.error('❌ Get all users error:', err);
+    res.status(500).json({ message: 'Failed to fetch users' });
   }
 };
